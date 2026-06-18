@@ -635,76 +635,89 @@ def generate_html(data):
     s_level = data["sentiment_level"]
     zt_total = data.get("zt_total", data["zt_data"].get("total", 0))
     temp_color = "#e74c3c" if s_temp >= 80 else ("#f39c12" if s_temp >= 60 else "#27ae60")
+    nf = data["north_flow"]
+    zt_stocks = data["zt_data"].get("stocks", [])
 
-    # 指数行
+    # ---- 指数行 ----
     idx_rows = ""
     for code, idx in data["a_indices"].items():
         chg_sign = "+" if idx["change_pct"] >= 0 else ""
         c = "#e74c3c" if idx["change_pct"] >= 0 else "#27ae60"
         idx_rows += f'<tr><td>{idx["name"]}</td><td style="color:{c}">{idx["price"]}</td><td style="color:{c}">{chg_sign}{idx["change_pct"]}%</td></tr>\n'
 
-    # 热点板块与涨停龙头（合并，卡片式布局）
-    zt_stocks = data["zt_data"].get("stocks", [])
-    # 构建概念→涨停股列表映射（含名称和涨幅）
+    # ---- 涨停概念标签（彩色气泡）----
+    concept_tags = ""
+    tag_colors = ["#e74c3c","#f39c12","#e056a0","#9b59b6","#3498db","#1abc9c"]
+    for i, ct in enumerate(data["concept_top"]):
+        c = tag_colors[i % len(tag_colors)]
+        # 统计该概念下涨停股数量
+        cnt = sum(1 for s in zt_stocks if ct["name"] in s.get("reason", "") or s.get("reason", "") == ct["name"])
+        concept_tags += f'<span class="ctag" style="background:{c};">{ct["name"]}({cnt}只)</span>'
+
+    # ---- 主力资金左右两栏（含进度条）----
+    inflow = [f for f in data["sector_flow"] if f["dir"] == "in"]
+    outflow = [f for f in data["sector_flow"] if f["dir"] == "out"]
+    max_amt = 0
+    for f in data["sector_flow"]:
+        a = abs(float(f["amount"].replace("亿","").replace("+","").replace("-","")))
+        if a > max_amt: max_amt = a
+    if max_amt == 0: max_amt = 1
+
+    def _flow_bar(fl, side):
+        a = abs(float(fl["amount"].replace("亿","").replace("+","").replace("-","")))
+        pct = min(100, int(a / max_amt * 100))
+        bar_c = "#e74c3c" if side == "in" else "#27ae60"
+        return f'<div class="flow-item"><div class="flow-name">{fl["name"]}</div><div class="flow-bar-wrap"><div class="flow-bar" style="width:{pct}%;background:{bar_c};"></div></div><div class="flow-amt" style="color:{bar_c}">{fl["amount"]}</div></div>'
+
+    flow_left = "\n".join([_flow_bar(f, "in") for f in inflow[:5]])
+    flow_right = "\n".join([_flow_bar(f, "out") for f in outflow[:5]])
+
+    # ---- 热点板块双列卡片（概念名+X只 + 龙头个股）----
     concept_leader_map = {}
     for ct in data["concept_top"]:
         stocks_in_concept = []
         for s in zt_stocks:
             reason = s.get("reason", "")
             if ct["name"] in reason or reason == ct["name"]:
-                stocks_in_concept.append({
-                    "name": s["name"],
-                    "zdf": s["zdf"],
-                    "code": s.get("code", ""),
-                })
-        concept_leader_map[ct["name"]] = stocks_in_concept[:6]  # 每个概念最多6只
+                stocks_in_concept.append({"name": s["name"], "zdf": s["zdf"]})
+        concept_leader_map[ct["name"]] = stocks_in_concept[:6]
 
-    concept_block = ""
+    concept_cards = ""
     for ct in data["concept_top"]:
         pct = ct["change_pct"]
         pct_color = "#e74c3c" if pct > 0 else "#27ae60"
         leaders = concept_leader_map.get(ct["name"], [])
         cnt = len(leaders)
-        stock_lines = ""
+        lines = ""
         for ld in leaders:
-            stock_lines += f'<div class="stock-row"><span class="stock-name">{ld["name"]}</span><span class="stock-pct" style="color:{pct_color}">{ld["zdf"]:+.2f}%</span></div>'
-        if not leaders:
-            stock_lines = '<div class="stock-row" style="color:#aaa;">暂无涨停个股</div>'
-        concept_block += f"""
-        <div class="concept-card">
-            <div class="concept-header">
-                <span class="concept-name">{ct["name"]}</span>
-                <span class="concept-badge">{cnt}只</span>
-            </div>
-            <div class="concept-body">
-                {stock_lines}
-            </div>
-        </div>"""
+            lines += f'<div class="ld-row"><span class="ld-name">{ld["name"]}</span><span class="ld-pct" style="color:{pct_color}">{ld["zdf"]:+.2f}%</span></div>'
+        if not lines:
+            lines = '<div style="color:#aaa;font-size:12px;">暂无涨停个股</div>'
+        concept_cards += f'<div class="ccard"><div class="ccard-hd"><span class="ccard-title">{ct["name"]}</span><span class="ccard-badge">{cnt}只</span></div><div class="ccard-bd">{lines}</div></div>'
 
-    # 板块资金
-    flow_rows = ""
-    for fl in data["sector_flow"]:
-        c = "#e74c3c" if fl["dir"] == "in" else "#27ae60"
-        tag = "流入" if fl["dir"] == "in" else "流出"
-        flow_rows += f'<tr><td>{fl["name"]}</td><td style="color:{c}">{tag} {fl["amount"]}</td></tr>\n'
+    # ---- 涨停龙头股表格（股票/板块/涨跌幅/驱动逻辑）----
+    leader_rows = ""
+    for ld in zt_stocks[:12]:
+        reason = ld.get("reason", "—")
+        if not reason: reason = "—"
+        leader_rows += f'<tr><td style="font-weight:bold;">{ld["name"]}</td><td style="color:#888;font-size:12px;">{reason}</td><td class="profit">{ld["zdf"]:+.2f}%</td><td style="color:#555;font-size:12px;">涨停</td></tr>\n'
 
-    # 大宗商品
+    # ---- 大宗商品 ----
     comm_rows = ""
     for code, cm in data["commodities"].items():
         comm_rows += f'<tr><td>{cm["name"]}</td><td>{cm["price"]}</td><td>{cm["change_pct"]}</td></tr>\n'
 
-    # 北向资金（仅情绪仪表里一行）
-    nf = data["north_flow"]
+    # ---- 盘后热点资讯 ----
+    news_block = ""
+    for n in data.get("closing_news", [])[:6]:
+        digest = n.get("digest", "")[:40]
+        digest_str = f' <span class="n-digest">{escape(digest)}</span>' if digest else ""
+        news_block += f'<div class="n-item"><span class="n-title">{escape(n["title"])}</span>{digest_str}</div>'
 
-    # 盘后热点资讯
-    news_rows = ""
-    for n in data.get("closing_news", []):
-        title = n["title"]
-        digest = n.get("digest", "")
-        if digest:
-            news_rows += f'<tr><td style="color:#e74c3c;font-weight:bold;">{escape(title)}</td><td style="color:#888;font-size:12px;">{escape(digest)}</td></tr>\n'
-        else:
-            news_rows += f'<tr><td style="color:#e74c3c;font-weight:bold;">{escape(title)}</td><td>—</td></tr>\n'
+    # ---- 明日展望数据准备 ----
+    in_names = "、".join([f["name"] for f in inflow[:3]]) if inflow else "暂无"
+    out_names = "、".join([f["name"] for f in outflow[:3]]) if outflow else "暂无"
+    usd = data.get("usd_info", {})
 
     html = f"""<!DOCTYPE html>
 <html lang="zh-CN">
@@ -714,97 +727,165 @@ def generate_html(data):
 <title>A股收盘复盘 | {date_str}</title>
 <style>
 * {{ margin: 0; padding: 0; box-sizing: border-box; }}
-body {{ font-family: "Microsoft YaHei","PingFang SC",sans-serif; background: #f5f6fa; color: #2c3e50; width: 800px; margin: 0 auto; }}
-.header {{ background: linear-gradient(135deg,#1a3a5c,#2c5f8a,#1a3a5c); padding: 28px 24px; text-align: center; border-bottom: 3px solid #e74c3c; }}
-.header h1 {{ font-size: 24px; color: #fff; margin-bottom: 6px; }}
-.header .sub {{ font-size: 13px; color: #a0c4e8; }}
-.header .date {{ font-size: 14px; color: #ffd700; margin-top: 4px; }}
-.section {{ margin: 16px 12px; background: #fff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.06); }}
-.section-title {{ background: linear-gradient(90deg,#eef2f7,#fff); padding: 12px 16px; font-size: 15px; font-weight: bold; color: #1a3a5c; border-bottom: 1px solid #e8ecf1; }}
+body {{ font-family: "Microsoft YaHei","PingFang SC",sans-serif; background: #f0f2f5; color: #2c3e50; width: 800px; margin: 0 auto; }}
+.header {{ background: linear-gradient(135deg,#1a3a5c,#2c5f8a); padding: 26px 24px; text-align: center; }}
+.header h1 {{ font-size: 22px; color: #fff; margin-bottom: 4px; }}
+.header .date {{ font-size: 13px; color: #a0c4e8; }}
+.header .vol {{ font-size: 12px; color: #ffd700; margin-top: 2px; }}
+.section {{ margin: 12px 12px; background: #fff; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 4px rgba(0,0,0,0.05); }}
+.section-title {{ padding: 10px 16px; font-size: 14px; font-weight: bold; color: #1a3a5c; border-bottom: 1px solid #eee; display: flex; align-items: center; gap: 6px; }}
+.section-title .icon {{ font-size: 16px; }}
 .section-content {{ padding: 12px 16px; }}
 table {{ width: 100%; border-collapse: collapse; font-size: 13px; }}
-th {{ background: #f0f3f8; color: #7f8c8d; font-weight: bold; padding: 8px 10px; text-align: left; font-size: 12px; border-bottom: 2px solid #e8ecf1; }}
-td {{ padding: 7px 10px; border-bottom: 1px solid #f0f3f8; }}
+th {{ background: #f7f8fa; color: #888; font-size: 12px; padding: 7px 10px; text-align: left; border-bottom: 2px solid #eee; }}
+td {{ padding: 6px 10px; border-bottom: 1px solid #f5f5f5; }}
 tr:last-child td {{ border-bottom: none; }}
-.num {{ text-align: right; }}
-.sentiment-box {{ display: flex; align-items: center; gap: 16px; }}
-.sentiment-gauge {{ width: 80px; height: 80px; border-radius: 50%; background: conic-gradient({temp_color} 0% {s_temp}%,#eee {s_temp}% 100%); display: flex; align-items: center; justify-content: center; }}
-.sentiment-inner {{ width: 58px; height: 58px; border-radius: 50%; background: #fff; display: flex; align-items: center; justify-content: center; font-size: 20px; font-weight: bold; color: {temp_color}; }}
-.sentiment-stats {{ flex: 1; font-size: 12px; line-height: 1.8; }}
-.sentiment-stats span {{ color: #95a5a6; }}
-.sentiment-stats .val {{ color: #2c3e50; font-weight: bold; }}
-.footer {{ text-align: center; padding: 16px; color: #aaa; font-size: 11px; border-top: 1px solid #eee; margin-top: 12px; }}
-.risk {{ color: #27ae60; font-weight: bold; }}
 .profit {{ color: #e74c3c; font-weight: bold; }}
-.highlight {{ color: #e74c3c; }}
-/* 概念卡片网格 */
-.concept-grid {{ display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }}
-.concept-card {{ background: #fafbfc; border-radius: 6px; border: 1px solid #e8ecf1; overflow: hidden; }}
-.concept-header {{ background: linear-gradient(90deg,#eef2f7,#fafbfc); padding: 8px 12px; border-bottom: 1px solid #e8ecf1; display: flex; justify-content: space-between; align-items: center; }}
-.concept-name {{ font-weight: bold; font-size: 13px; color: #1a3a5c; }}
-.concept-badge {{ background: #e74c3c; color: #fff; font-size: 11px; padding: 2px 8px; border-radius: 10px; }}
-.concept-body {{ padding: 6px 12px 8px; }}
-.stock-row {{ display: flex; justify-content: space-between; align-items: center; padding: 4px 0; border-bottom: 1px dotted #f0f0f0; font-size: 12px; }}
-.stock-row:last-child {{ border-bottom: none; }}
-.stock-name {{ color: #555; }}
-.stock-pct {{ font-weight: bold; font-size: 12px; white-space: nowrap; }}
+.risk {{ color: #27ae60; font-weight: bold; }}
+
+/* 情绪仪表 */
+.senti-box {{ display: flex; align-items: center; gap: 14px; }}
+.senti-ring {{ width: 70px; height: 70px; border-radius: 50%; background: conic-gradient({temp_color} 0% {s_temp}%,#eee {s_temp}% 100%); display: flex; align-items: center; justify-content: center; }}
+.senti-inner {{ width: 50px; height: 50px; border-radius: 50%; background: #fff; display: flex; align-items: center; justify-content: center; font-size: 18px; font-weight: bold; color: {temp_color}; }}
+.senti-info {{ font-size: 12px; line-height: 1.9; }}
+.senti-info .lbl {{ color: #999; }}
+.senti-info .v {{ font-weight: bold; }}
+
+/* 概念标签 */
+.ctags {{ display: flex; flex-wrap: wrap; gap: 8px; }}
+.ctag {{ color: #fff; font-size: 12px; padding: 4px 12px; border-radius: 14px; white-space: nowrap; }}
+
+/* 资金流左右栏 */
+.flow-cols {{ display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }}
+.flow-col {{  }}
+.flow-col-title {{ font-size: 12px; color: #888; margin-bottom: 8px; padding-bottom: 4px; border-bottom: 1px solid #eee; }}
+.flow-item {{ display: flex; align-items: center; gap: 8px; margin-bottom: 6px; font-size: 12px; }}
+.flow-name {{ width: 80px; color: #555; text-align: right; }}
+.flow-bar-wrap {{ flex: 1; height: 12px; background: #f0f0f0; border-radius: 6px; overflow: hidden; }}
+.flow-bar {{ height: 100%; border-radius: 6px; }}
+.flow-amt {{ width: 70px; font-weight: bold; font-size: 11px; white-space: nowrap; }}
+
+/* 概念双列卡片 */
+.ccard-grid {{ display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }}
+.ccard {{ background: #fafbfc; border-radius: 6px; border: 1px solid #e8ecf1; overflow: hidden; }}
+.ccard-hd {{ background: #eef2f7; padding: 7px 10px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #e0e4ea; }}
+.ccard-title {{ font-weight: bold; font-size: 12px; color: #2c3e50; }}
+.ccard-badge {{ background: #e74c3c; color: #fff; font-size: 10px; padding: 2px 7px; border-radius: 9px; }}
+.ccard-bd {{ padding: 5px 10px 7px; }}
+.ld-row {{ display: flex; justify-content: space-between; padding: 3px 0; border-bottom: 1px dotted #f0f0f0; font-size: 11px; }}
+.ld-row:last-child {{ border-bottom: none; }}
+.ld-name {{ color: #666; }}
+.ld-pct {{ font-weight: bold; }}
+
+/* 热点资讯 */
+.n-item {{ padding: 5px 0; border-bottom: 1px dotted #f0f0f0; font-size: 12px; line-height: 1.6; }}
+.n-item:last-child {{ border-bottom: none; }}
+.n-title {{ color: #2c3e50; font-weight: bold; }}
+.n-digest {{ color: #aaa; font-size: 11px; }}
+
+/* 明日展望 */
+.outlook-box {{ background: #fdf8f0; border: 1px solid #f0e0c0; border-radius: 6px; padding: 12px 14px; font-size: 12px; line-height: 1.8; }}
+.outlook-box .lbl {{ color: #999; }}
+
+.footer {{ text-align: center; padding: 14px; color: #bbb; font-size: 10px; }}
 </style>
 </head>
 <body>
 
 <div class="header">
     <h1>A股收盘复盘报告</h1>
-    <div class="date">{date_str} {wd}收盘 | 总成交额 {data['total_amount']}亿</div>
-    <div class="sub">实时API数据 · 多板块全景复盘 · 仅供参考不构成投资建议</div>
+    <div class="date">{date_str} {wd}收盘</div>
+    <div class="vol">总成交额 {data['total_amount']}亿</div>
 </div>
 
 <div class="section">
-    <div class="section-title">🌡️ 市场情绪温度计</div>
+    <div class="section-title"><span class="icon">🌡️</span> 市场情绪温度计</div>
     <div class="section-content">
-        <div class="sentiment-box">
-            <div class="sentiment-gauge"><div class="sentiment-inner">{s_temp}°</div></div>
-            <div class="sentiment-stats">
-                <div>市场情绪: <span class="val">{s_level}</span></div>
-                <div>涨停: <span class="val profit">{zt_total}家</span> | 跌停: <span class="val risk">{data['dt_count']}家</span></div>
-                <div>成交额: <span class="val">{data['total_amount']}亿</span></div>
-                <div>北向资金: <span class="val profit">{nf['total']}</span></div>
+        <div class="senti-box">
+            <div class="senti-ring"><div class="senti-inner">{s_temp}°</div></div>
+            <div class="senti-info">
+                <span class="lbl">情绪状态</span> <span class="v">{s_level}</span>&nbsp;&nbsp;
+                <span class="lbl">涨停</span> <span class="v profit">{zt_total}家</span>&nbsp;&nbsp;
+                <span class="lbl">跌停</span> <span class="v risk">{data['dt_count']}家</span><br>
+                <span class="lbl">北向资金</span> <span class="v profit">{nf['total']}</span>&nbsp;&nbsp;
+                <span class="lbl">成交额</span> <span class="v">{data['total_amount']}亿</span>
             </div>
         </div>
     </div>
 </div>
 
 <div class="section">
-    <div class="section-title">📊 指数概览</div>
+    <div class="section-title"><span class="icon">📊</span> 指数概览</div>
     <div class="section-content">
         <table><tr><th>指数</th><th>收盘</th><th>涨跌幅</th></tr>{idx_rows}</table>
     </div>
 </div>
 
 <div class="section">
-    <div class="section-title">🔥 热点板块与涨停龙头</div>
+    <div class="section-title"><span class="icon">🏷️</span> 涨停概念分布</div>
     <div class="section-content">
-        <div class="concept-grid">{concept_block}</div>
+        <div class="ctags">{concept_tags}</div>
     </div>
 </div>
 
 <div class="section">
-    <div class="section-title">💰 板块资金流向</div>
+    <div class="section-title"><span class="icon">📈</span> 主力板块资金流向 TOP5</div>
     <div class="section-content">
-        <table><tr><th>板块</th><th>资金动向</th></tr>{flow_rows}</table>
+        <div class="flow-cols">
+            <div class="flow-col">
+                <div class="flow-col-title">🔴 主力净流入 TOP5</div>
+                {flow_left if flow_left else '<div style="color:#aaa;font-size:12px;">暂无数据</div>'}
+            </div>
+            <div class="flow-col">
+                <div class="flow-col-title">🟢 主力净流出 TOP5</div>
+                {flow_right if flow_right else '<div style="color:#aaa;font-size:12px;">暂无数据</div>'}
+            </div>
+        </div>
     </div>
 </div>
 
 <div class="section">
-    <div class="section-title">🛢️ 大宗商品行情</div>
+    <div class="section-title"><span class="icon">🔥</span> 热点板块与涨停代表个股</div>
     <div class="section-content">
+        <div class="ccard-grid">{concept_cards}</div>
+    </div>
+</div>
+
+<div class="section">
+    <div class="section-title"><span class="icon">👑</span> 涨停龙头股</div>
+    <div class="section-content">
+        <table><tr><th>股票名称</th><th>所属板块</th><th>涨跌幅</th><th>驱动逻辑</th></tr>{leader_rows}</table>
+    </div>
+</div>
+
+<div class="section">
+    <div class="section-title"><span class="icon">🌏</span> 北向资金 & 大宗商品</div>
+    <div class="section-content">
+        <div style="font-size:13px;margin-bottom:10px;">
+            <span class="lbl" style="color:#999;">北向资金</span> 净<span class="profit">{nf['total']}</span>&nbsp;&nbsp;
+            沪股通 <span class="profit">{nf['sh']}</span>&nbsp;&nbsp;
+            深股通 <span class="profit">{nf['sz']}</span>
+            {f'&nbsp;&nbsp;|&nbsp;&nbsp;<span class="lbl" style="color:#999;">美元指数</span> {usd.get("price","N/A")}（{usd.get("change_pct",0):+.2f}%）' if usd else ""}
+        </div>
         <table><tr><th>品种</th><th>价格</th><th>涨跌</th></tr>{comm_rows}</table>
     </div>
 </div>
 
 <div class="section">
-    <div class="section-title">📰 盘后热点资讯</div>
+    <div class="section-title"><span class="icon">📰</span> 盘后热点资讯</div>
     <div class="section-content">
-        <table><tr><th style="width:40%;">标题</th><th>摘要</th></tr>{news_rows}</table>
+        {news_block if news_block else '<div style="color:#aaa;font-size:12px;">暂无热点资讯</div>'}
+    </div>
+</div>
+
+<div class="section">
+    <div class="section-title"><span class="icon">🔮</span> 明日展望</div>
+    <div class="section-content">
+        <div class="outlook-box">
+            <div><span class="lbl">利好方向：</span>{in_names}</div>
+            <div><span class="lbl">承压方向：</span>{out_names}</div>
+            <div style="margin-top:4px;color:#555;">策略建议：关注主力资金持续流入的板块，回避资金出逃方向。注意概念轮动节奏，关注龙头股持续性。</div>
+        </div>
     </div>
 </div>
 
