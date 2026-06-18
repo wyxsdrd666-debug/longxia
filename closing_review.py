@@ -509,6 +509,7 @@ def collect_all_data():
         "sector_flow": sector_flow,
         "concept_top": concept_top,
         "zt_data": zt_data,
+        "zt_total": zt_total,
         "dt_count": dt_count,
         "north_flow": north_flow,
         "total_amount": round(total_amount, 0),
@@ -525,6 +526,7 @@ def generate_html(data):
     wd = data["weekday"]
     s_temp = data["sentiment_temp"]
     s_level = data["sentiment_level"]
+    zt_total = data.get("zt_total", data["zt_data"].get("total", 0))
     temp_color = "#e74c3c" if s_temp >= 80 else ("#f39c12" if s_temp >= 60 else "#27ae60")
 
     # 指数行
