@@ -1056,7 +1056,7 @@ def main():
         except Exception as e:
             print(f"HTML生成异常: {e}", file=sys.stderr)
 
-    # 生成飞书卡片并推送（容错）
+    # 生成飞书卡片并推送（容错，消息间延迟1.5s避免飞书频率限制11232）
     if data:
         try:
             cards = format_feishu_cards(data)
@@ -1070,12 +1070,22 @@ def main():
                 card = build_markdown_card(title, md, "blue")
                 r = send_card(WEBHOOK, card, SECRET)
                 print(f"  -> {r}")
+                # 飞书频率限制（code 11232）：重试一次
+                if isinstance(r, dict) and r.get("code") == 11232:
+                    print(f"  [RATE_LIMIT] 卡片{i}被限频，等待3秒后重试...")
+                    time.sleep(3)
+                    r2 = send_card(WEBHOOK, card, SECRET)
+                    print(f"  -> 重试: {r2}")
             except Exception as e:
                 print(f"  -> 推送异常: {e}", file=sys.stderr)
+            # 每条消息间隔1.5秒，避免触发频率限制
+            if i < len(cards):
+                time.sleep(1.5)
 
-        # 推送第4条消息：长图 + 备用链接卡片（双重保险）
+        # 推送第4条消息：长图（消息间有卡片延迟，此处不需要额外间隔）
         if os.path.exists(png_path):
             if FEISHU_APP_ID and FEISHU_APP_SECRET:
+                time.sleep(1.5)  # 与最后一张卡片间隔
                 print("上传长图到飞书...")
                 image_key = upload_image_to_feishu(FEISHU_APP_ID, FEISHU_APP_SECRET, png_path)
                 if image_key:
@@ -1087,12 +1097,14 @@ def main():
                         print(f"  -> 长图发送异常: {e}", file=sys.stderr)
                 else:
                     print("[WARN] 图片上传失败", file=sys.stderr)
-                # 无论图片消息是否成功，都补发一个带链接的卡片确保可达
-                print("发送备用链接卡片...")
-                _send_fallback_image_link(png_path, image_url, date_str)
             else:
                 print("[INFO] FEISHU_APP_ID/APP_SECRET 未配置，发送链接代替")
-                _send_fallback_image_link(png_path, image_url, date_str)
+
+            # 备用链接（与图片消息间隔）
+            time.sleep(1.5)
+            print("发送备用链接卡片...")
+            # 将链接嵌入到卡片2末尾，不再单独发送（减少消息数避免限频）
+            _send_fallback_image_link(png_path, image_url, date_str)
         else:
             print("[WARN] PNG长图未生成，发送纯文本降级", file=sys.stderr)
             # 降级方案：发送文本版长图摘要
