@@ -456,7 +456,7 @@ def fetch_north_flow():
 # 数据获取 - 概念板块涨幅TOP
 # ============================================================
 def fetch_concept_top(top_n=6):
-    """获取概念板块涨幅排行"""
+    """获取概念板块涨幅排行（含概念代码f12）"""
     url = (
         f"{EM_PUSH_URL}/api/qt/clist/get?"
         "fid=f3&po=1&pz=20&pn=1&fs=m:90+t:3"
@@ -470,14 +470,50 @@ def fetch_concept_top(top_n=6):
     concepts = []
     for key, item in diff.items():
         name = item.get("f14", "")
+        code = item.get("f12", "")
         chg_pct = item.get("f3", 0) or 0
         chg_real = chg_pct / 100 if abs(chg_pct) > 500 else chg_pct
         concepts.append({
+            "code": code,
             "name": name,
             "change_pct": round(chg_real, 2),
         })
     concepts.sort(key=lambda x: x["change_pct"], reverse=True)
     return concepts[:top_n]
+
+
+def fetch_concept_zt_stocks(concept_code, top_n=6):
+    """获取特定概念板块内的涨停个股（通过概念成分股API + 涨跌幅筛选）"""
+    url = (
+        f"{EM_PUSH_URL}/api/qt/clist/get?"
+        "fid=f3&po=0&pz=200&pn=1"
+        f"&fs=b:{concept_code}&fields=f12,f14,f2,f3,f20,f100"
+        f"&ut={EM_UT}"
+    )
+    data = http_get_json(url, EM_HEADERS)
+    if not data or "data" not in data:
+        return []
+    diff = data["data"].get("diff", {})
+    stocks = []
+    for key, item in diff.items():
+        chg_pct = item.get("f3", 0) or 0
+        chg_real = chg_pct / 100
+        code = item.get("f12", "")
+        is_chuangye = code.startswith("30")
+        is_kechuang = code.startswith("68")
+        if is_chuangye or is_kechuang:
+            if chg_real < 18.0:
+                continue
+        else:
+            if chg_real < 9.0:
+                continue
+        stocks.append({
+            "name": item.get("f14", ""),
+            "code": code,
+            "zdf": round(chg_real, 2),
+        })
+    stocks.sort(key=lambda x: x["zdf"], reverse=True)
+    return stocks[:top_n]
 
 
 # ============================================================
@@ -578,6 +614,18 @@ def collect_all_data():
     print("5. 概念板块...")
     concept_top = fetch_concept_top(6)
 
+    # 5b. 各概念的涨停成分股（精确匹配，不再依赖f100字符串匹配）
+    print("5b. 概念涨停个股...")
+    concept_zt = {}  # {concept_name: [stock_dict, ...]}
+    for ct in concept_top:
+        try:
+            zt_list = fetch_concept_zt_stocks(ct["code"], 6)
+            concept_zt[ct["name"]] = zt_list
+            print(f"  {ct['name']}({ct['code']}) -> {len(zt_list)}只涨停")
+        except Exception as e:
+            print(f"  {ct['name']} 获取涨停个股失败: {e}")
+            concept_zt[ct["name"]] = []
+
     # 6. 涨停池
     print("6. 涨停池...")
     zt_data = fetch_zt_pool(60)
@@ -622,6 +670,7 @@ def collect_all_data():
         "sentiment_temp": temp,
         "sentiment_level": temp_level,
         "closing_news": closing_news,
+        "concept_zt": concept_zt,  # 各概念的涨停成分股（精确匹配）
     }
 
 
@@ -650,8 +699,7 @@ def generate_html(data):
     tag_colors = ["#e74c3c","#f39c12","#e056a0","#9b59b6","#3498db","#1abc9c"]
     for i, ct in enumerate(data["concept_top"]):
         c = tag_colors[i % len(tag_colors)]
-        # 统计该概念下涨停股数量
-        cnt = sum(1 for s in zt_stocks if ct["name"] in s.get("reason", "") or s.get("reason", "") == ct["name"])
+        cnt = concept_cnt_map.get(ct["name"], 0)
         concept_tags += f'<span class="ctag" style="background:{c};">{ct["name"]}({cnt}只)</span>'
 
     # ---- 主力资金左右两栏（含进度条）----
@@ -672,22 +720,16 @@ def generate_html(data):
     flow_left = "\n".join([_flow_bar(f, "in") for f in inflow[:5]])
     flow_right = "\n".join([_flow_bar(f, "out") for f in outflow[:5]])
 
-    # ---- 热点板块与代表个股（列表式：概念名 + 个股/涨幅横向排列）----
-    concept_leader_map = {}
+    # ---- 概念涨停股数量（用于标签）----
+    concept_cnt_map = {}
     for ct in data["concept_top"]:
-        stocks_in_concept = []
-        for s in zt_stocks:
-            reason = s.get("reason", "")
-            if ct["name"] in reason or reason == ct["name"]:
-                stocks_in_concept.append({"name": s["name"], "zdf": s["zdf"]})
-        concept_leader_map[ct["name"]] = stocks_in_concept[:6]
+        zt_list = data.get("concept_zt", {}).get(ct["name"], [])
+        concept_cnt_map[ct["name"]] = len(zt_list)
 
+    # ---- 热点板块与代表个股（精确匹配：概念成分股API）----
     concept_rows = ""
     for ct in data["concept_top"]:
-        pct = ct["change_pct"]
-        pct_color = "#e74c3c" if pct > 0 else "#27ae60"
-        leaders = concept_leader_map.get(ct["name"], [])
-        cnt = len(leaders)
+        leaders = data.get("concept_zt", {}).get(ct["name"], [])
         stock_list = ""
         for i, ld in enumerate(leaders):
             sep = ' <span style="color:#ddd;">/</span> ' if i > 0 else ""
@@ -697,7 +739,7 @@ def generate_html(data):
             stock_list = '<span style="color:#aaa;">暂无涨停个股</span>'
         concept_rows += f'''
         <tr>
-            <td class="hl-concept" style="width:95px;"><span class="hl-concept-name">{ct["name"]}</span><span class="hl-concept-cnt">({cnt}只)</span></td>
+            <td class="hl-concept" style="width:95px;"><span class="hl-concept-name">{ct["name"]}</span><span class="hl-concept-cnt">({len(leaders)}只)</span></td>
             <td class="hl-stocks">{stock_list}</td>
         </tr>'''
 
