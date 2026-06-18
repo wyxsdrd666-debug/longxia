@@ -808,6 +808,8 @@ def render_html_to_png(html_path, png_path, width=800):
     GitHub Actions 环境已预装 chromium。
     如果 playwright 不可用则返回 None。
     """
+    import traceback as _tb
+
     try:
         from playwright.sync_api import sync_playwright
     except ImportError:
@@ -816,15 +818,22 @@ def render_html_to_png(html_path, png_path, width=800):
 
     try:
         with sync_playwright() as p:
-            browser = p.chromium.launch(headless=True, args=["--no-sandbox"])
+            browser = p.chromium.launch(headless=True, args=["--no-sandbox", "--disable-gpu", "--disable-dev-shm-usage"])
             page = browser.new_page(viewport={"width": width, "height": 800})
-            page.goto(f"file://{html_path}", wait_until="networkidle", timeout=30000)
+            # 使用 "load" 而非 "networkidle" — file:// 协议下 networkidle 可能永不触发
+            page.goto(f"file://{html_path}", wait_until="domcontentloaded", timeout=15000)
+            page.wait_for_timeout(1500)  # 等待 CSS 渲染完成
 
             # 获取完整页面高度并截图
             full_height = page.evaluate("document.body.scrollHeight")
+            if not full_height or full_height < 100:
+                full_height = page.evaluate("() => Math.max(document.body.scrollHeight, 800)")
+                print(f"[WARN] scrollHeight 异常，使用兜底值: {full_height}px")
+            print(f"页面高度: {full_height}px, 开始截图...")
             page.set_viewport_size({"width": width, "height": full_height + 50})
             page.screenshot(path=png_path + ".raw.png", full_page=True)
             browser.close()
+            print(f"原始截图已保存: {png_path}.raw.png")
 
         # 用 PIL 缩小图片至飞书卡片允许的尺寸范围（高度不超过3840px）
         _resize_png(png_path + ".raw.png", png_path, max_height=3840)
@@ -835,6 +844,7 @@ def render_html_to_png(html_path, png_path, width=800):
         return png_path
     except Exception as e:
         print(f"[WARN] PNG渲染失败: {e}", file=sys.stderr)
+        _tb.print_exc(file=sys.stderr)
         return None
 
 
@@ -852,10 +862,17 @@ def _resize_png(src_path, dst_path, max_height=3840):
             print(f"图片已缩放: {w}x{h} -> {new_w}x{new_h}")
         img.save(dst_path, "PNG", optimize=True)
     except ImportError:
-        # PIL 不可用时直接复制（兜底）
+        # PIL 不可用时直接复制原图（兜底）
         import shutil
         shutil.copyfile(src_path, dst_path)
-        print("[WARN] PIL 未安装，跳过图片缩放")
+        print("[WARN] PIL 未安装，使用原始截图")
+    except Exception as e:
+        # PIL 处理失败时也回退到复制原图
+        import shutil
+        import traceback as _tb
+        shutil.copyfile(src_path, dst_path)
+        print(f"[WARN] PIL 处理失败: {e}，使用原始截图", file=sys.stderr)
+        _tb.print_exc(file=sys.stderr)
 
 
 # ============================================================
@@ -955,6 +972,48 @@ def _send_fallback_image_link(png_path, image_url, date_str):
         print(f"  -> 备用链接推送异常: {e}", file=sys.stderr)
 
 
+def _send_text_fallback(data, date_str):
+    """PNG渲染完全失败时的纯文本降级推送"""
+    if not data:
+        print("[WARN] 无数据，跳过文本降级", file=sys.stderr)
+        return
+    try:
+        lines = [
+            f"⚠️ 长图渲染失败，以下为纯文本摘要",
+            "",
+        ]
+        # 指数
+        lines.append("📊 指数概览")
+        for code, idx in data.get("a_indices", {}).items():
+            sign = "+" if idx["change_pct"] >= 0 else ""
+            lines.append(f"  {idx['name']}: {idx['price']}（{sign}{idx['change_pct']}%）")
+        # 情绪
+        lines.append(f"")
+        lines.append(f"🌡️ 市场情绪: {data.get('sentiment_temp', 'N/A')}°（{data.get('sentiment_level', 'N/A')}）")
+        lines.append(f"涨停: {data.get('zt_total', 0)}家 | 跌停: {data.get('dt_count', 0)}家")
+        lines.append(f"北向资金: 净{data.get('north_flow', {}).get('total', 'N/A')}")
+        # 概念
+        if data.get("concept_top"):
+            lines.append(f"")
+            lines.append(f"🔥 概念板块TOP")
+            for ct in data["concept_top"][:3]:
+                lines.append(f"  {ct['name']}: {ct['change_pct']:+.2f}%")
+        # 资金
+        if data.get("sector_flow"):
+            lines.append(f"")
+            lines.append(f"💰 板块资金")
+            for fl in data["sector_flow"][:4]:
+                tag = "流入" if fl["dir"] == "in" else "流出"
+                lines.append(f"  {fl['name']}: {tag} {fl['amount']}")
+
+        text_md = "\n".join(lines)
+        card = build_markdown_card(f"📉 收盘复盘摘要 | {date_str}", text_md, "red")
+        r = send_card(WEBHOOK, card, SECRET)
+        print(f"  -> 文本降级推送: {r}")
+    except Exception as e:
+        print(f"  -> 文本降级推送异常: {e}", file=sys.stderr)
+
+
 def main():
     if not WEBHOOK:
         print("Error: FEISHU_WEBHOOK environment variable is required", file=sys.stderr)
@@ -1014,8 +1073,9 @@ def main():
             except Exception as e:
                 print(f"  -> 推送异常: {e}", file=sys.stderr)
 
-        # 推送第4条消息：长图（原生图片消息）
+        # 推送第4条消息：长图（优先原生图片消息，失败则降级到卡片+链接）
         if os.path.exists(png_path):
+            image_sent = False
             if FEISHU_APP_ID and FEISHU_APP_SECRET:
                 print("上传长图到飞书...")
                 image_key = upload_image_to_feishu(FEISHU_APP_ID, FEISHU_APP_SECRET, png_path)
@@ -1024,16 +1084,24 @@ def main():
                     try:
                         r = send_image(WEBHOOK, image_key, SECRET)
                         print(f"  -> {r}")
+                        # 检查返回码：0=成功，其他=失败
+                        if isinstance(r, dict) and r.get("code", 0) == 0:
+                            image_sent = True
+                        else:
+                            print(f"[WARN] 图片消息发送失败: {r}", file=sys.stderr)
                     except Exception as e:
                         print(f"  -> 长图发送异常: {e}", file=sys.stderr)
                 else:
-                    print("[WARN] 图片上传失败，发送链接备用")
-                    _send_fallback_image_link(png_path, image_url, date_str)
+                    print("[WARN] 图片上传失败，降级到链接", file=sys.stderr)
             else:
                 print("[INFO] FEISHU_APP_ID/APP_SECRET 未配置，发送链接代替")
+
+            if not image_sent:
                 _send_fallback_image_link(png_path, image_url, date_str)
         else:
-            print("[INFO] PNG长图未生成，跳过长图")
+            print("[WARN] PNG长图未生成，发送纯文本降级", file=sys.stderr)
+            # 降级方案：发送文本版长图摘要
+            _send_text_fallback(data, date_str)
 
     print(f"HTML_PATH={html_path}")
     print(f"PNG_PATH={png_path}")
