@@ -577,6 +577,40 @@ tr:last-child td {{ border-bottom: none; }}
 
 
 # ============================================================
+# HTML → PNG 长图渲染（可选，需 playwright）
+# ============================================================
+def render_html_to_png(html_path, png_path, width=800):
+    """使用 playwright 将 HTML 渲染为 PNG 长图。
+    需要安装: pip install playwright && playwright install chromium
+    GitHub Actions 环境已预装 chromium。
+    如果 playwright 不可用则返回 None。
+    """
+    try:
+        from playwright.sync_api import sync_playwright
+    except ImportError:
+        print("[WARN] playwright 未安装，跳过 PNG 渲染", file=sys.stderr)
+        return None
+
+    try:
+        with sync_playwright() as p:
+            browser = p.chromium.launch(headless=True, args=["--no-sandbox"])
+            page = browser.new_page(viewport={"width": width, "height": 800})
+            page.goto(f"file://{html_path}", wait_until="networkidle", timeout=30000)
+
+            # 获取完整页面高度并截图
+            full_height = page.evaluate("document.body.scrollHeight")
+            page.set_viewport_size({"width": width, "height": full_height + 50})
+            page.screenshot(path=png_path, full_page=True)
+            browser.close()
+
+        print(f"PNG长图已保存: {png_path}")
+        return png_path
+    except Exception as e:
+        print(f"[WARN] PNG渲染失败: {e}", file=sys.stderr)
+        return None
+
+
+# ============================================================
 # 飞书卡片格式化
 # ============================================================
 def format_feishu_cards(data):
@@ -674,12 +708,24 @@ def main():
 
     # 生成HTML长图（容错）
     html_path = "/tmp/closing_review.html"
+    png_path = "/tmp/closing_review.png"
+    png_date = now.strftime("%Y-%m-%d")
+    png_filename = f"closing-review-{png_date}.png"
+    # GitHub Pages 托管地址（用于飞书卡片引用）
+    repo_name = os.environ.get("GITHUB_REPOSITORY", "wyxsdrd666-debug/longxia")
+    owner = repo_name.split("/")[0]
+    repo = repo_name.split("/")[1] if "/" in repo_name else repo_name
+    image_url = f"https://{owner}.github.io/{repo}/{png_filename}"
+
     if data:
         try:
             html = generate_html(data)
             with open(html_path, "w", encoding="utf-8") as f:
                 f.write(html)
             print(f"HTML长图已保存: {html_path}")
+
+            # 尝试渲染为PNG长图
+            render_html_to_png(html_path, png_path, width=800)
         except Exception as e:
             print(f"HTML生成异常: {e}", file=sys.stderr)
 
@@ -700,7 +746,22 @@ def main():
             except Exception as e:
                 print(f"  -> 推送异常: {e}", file=sys.stderr)
 
+        # 推送第4张卡片：长图链接
+        if os.path.exists(png_path):
+            print(f"推送长图链接...")
+            img_md = f"🖼️ **收盘复盘长图**\n\n[点击查看完整长图]({image_url})\n\n> 图片托管于 GitHub Pages，加载可能需要几秒。"
+            try:
+                img_card = build_markdown_card(f"🖼️ 收盘复盘长图 | {date_str}", img_md, "red")
+                r = send_card(WEBHOOK, img_card, SECRET)
+                print(f"  -> {r}")
+            except Exception as e:
+                print(f"  -> 长图推送异常: {e}", file=sys.stderr)
+        else:
+            print("[INFO] PNG长图未生成，跳过图片卡片")
+
     print(f"HTML_PATH={html_path}")
+    print(f"PNG_PATH={png_path}")
+    print(f"IMAGE_URL={image_url}")
     return 0
 
 

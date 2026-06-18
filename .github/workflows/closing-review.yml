@@ -6,10 +6,14 @@ on:
     - cron: "30 7 * * 1-5"
   workflow_dispatch:  # 手动触发
 
+# 需要 contents: write 权限用于部署 GitHub Pages
+permissions:
+  contents: write
+
 jobs:
   push-review:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 15
 
     steps:
       - name: 检出代码
@@ -20,13 +24,41 @@ jobs:
         with:
           python-version: "3.11"
 
-      - name: 运行收盘复盘
+      - name: 安装 Playwright + Chromium
+        run: |
+          pip install playwright
+          python -m playwright install chromium --with-deps
+
+      - name: 运行收盘复盘（生成HTML+PNG长图+推送飞书）
+        id: review
         env:
           FEISHU_WEBHOOK: ${{ secrets.FEISHU_WEBHOOK }}
           FEISHU_SECRET: ${{ secrets.FEISHU_SECRET }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
         run: python closing_review.py
 
-      - name: 上传 HTML 长图
+      - name: 准备 GitHub Pages 部署目录
+        run: |
+          mkdir -p public
+          PNG_DATE=$(date +%Y-%m-%d)
+          if [ -f /tmp/closing_review.png ]; then
+            cp /tmp/closing_review.png "public/closing-review-${PNG_DATE}.png"
+            echo "PNG copied to public/closing-review-${PNG_DATE}.png"
+          else
+            echo "WARNING: /tmp/closing_review.png not found, skipping PNG deploy"
+          fi
+          # 同时部署 HTML 方便调试
+          cp /tmp/closing_review.html "public/closing-review-${PNG_DATE}.html" 2>/dev/null || true
+
+      - name: 部署到 GitHub Pages
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./public
+          keep_files: true
+          # 保留历史图片，每次只追加新的PNG
+
+      - name: 上传 HTML（Artifact 备份）
         uses: actions/upload-artifact@v4
         with:
           name: closing-review-html
