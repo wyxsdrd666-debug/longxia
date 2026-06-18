@@ -24,9 +24,9 @@ jobs:
         with:
           python-version: "3.11"
 
-      - name: 安装 Playwright + Chromium
+      - name: 安装 Playwright + Chromium + Pillow
         run: |
-          pip install playwright
+          pip install playwright pillow
           python -m playwright install chromium --with-deps
 
       - name: 运行收盘复盘（生成HTML+PNG长图+推送飞书）

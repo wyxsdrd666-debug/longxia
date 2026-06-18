@@ -702,14 +702,39 @@ def render_html_to_png(html_path, png_path, width=800):
             # 获取完整页面高度并截图
             full_height = page.evaluate("document.body.scrollHeight")
             page.set_viewport_size({"width": width, "height": full_height + 50})
-            page.screenshot(path=png_path, full_page=True)
+            page.screenshot(path=png_path + ".raw.png", full_page=True)
             browser.close()
 
-        print(f"PNG长图已保存: {png_path}")
+        # 用 PIL 缩小图片至飞书卡片允许的尺寸范围（高度不超过3840px）
+        _resize_png(png_path + ".raw.png", png_path, max_height=3840)
+        os.remove(png_path + ".raw.png")
+
+        file_size = os.path.getsize(png_path) / 1024
+        print(f"PNG长图已保存: {png_path} ({file_size:.0f} KB)")
         return png_path
     except Exception as e:
         print(f"[WARN] PNG渲染失败: {e}", file=sys.stderr)
         return None
+
+
+def _resize_png(src_path, dst_path, max_height=3840):
+    """缩放 PNG 图片使其高度不超过 max_height，保持宽高比"""
+    try:
+        from PIL import Image
+        img = Image.open(src_path)
+        w, h = img.size
+        if h > max_height:
+            scale = max_height / h
+            new_w = int(w * scale)
+            new_h = max_height
+            img = img.resize((new_w, new_h), Image.LANCZOS)
+            print(f"图片已缩放: {w}x{h} -> {new_w}x{new_h}")
+        img.save(dst_path, "PNG", optimize=True)
+    except ImportError:
+        # PIL 不可用时直接复制（兜底）
+        import shutil
+        shutil.copyfile(src_path, dst_path)
+        print("[WARN] PIL 未安装，跳过图片缩放")
 
 
 # ============================================================
