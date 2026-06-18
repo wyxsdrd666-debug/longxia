@@ -125,16 +125,16 @@ def get_closing_data():
             {"name": "光通信/MPO", "count": 5, "leader": "长盈通(停牌)"},
             {"name": "通信设备", "count": 5, "leader": "中兴通讯"},
         ],
-        # 模块4：板块资金流向
+        # 模块4：板块资金流向（申万一级行业，数据来源：Wind/东方财富）
         "sector_flow": [
-            {"name": "半导体", "amount": "+58.3亿", "dir": "in"},
-            {"name": "通信设备", "amount": "+35.7亿", "dir": "in"},
-            {"name": "元件/PCB", "amount": "+28.9亿", "dir": "in"},
-            {"name": "计算机设备", "amount": "+15.2亿", "dir": "in"},
-            {"name": "电子化学品", "amount": "+12.1亿", "dir": "in"},
-            {"name": "白酒", "amount": "-22.5亿", "dir": "out"},
-            {"name": "银行", "amount": "-18.3亿", "dir": "out"},
-            {"name": "保险", "amount": "-12.7亿", "dir": "out"},
+            {"name": "电子", "amount": "+790亿", "dir": "in"},
+            {"name": "建筑材料", "amount": "+80.39亿", "dir": "in"},
+            {"name": "机械设备", "amount": "+70.06亿", "dir": "in"},
+            {"name": "电力设备", "amount": "-87.40亿", "dir": "out"},
+            {"name": "有色金属", "amount": "-83.94亿", "dir": "out"},
+            {"name": "基础化工", "amount": "-46.2亿", "dir": "out"},
+            {"name": "银行", "amount": "-23.65亿", "dir": "out"},
+            {"name": "商贸零售", "amount": "-10.86亿", "dir": "out"},
         ],
         # 模块5：涨停龙头股
         "leaders": [
