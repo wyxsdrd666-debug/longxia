@@ -69,7 +69,26 @@ def send_card(webhook_url, card, secret=None):
         return {"code": -1, "msg": str(e)}
 
 
-def build_markdown_card(title, md_content, color="blue"):
+def send_image(webhook_url, image_key, secret=None):
+    """发送飞书原生图片消息（msg_type: image）"""
+    timestamp = str(int(time.time()))
+    msg_body = {
+        "timestamp": timestamp,
+        "msg_type": "image",
+        "content": {"image_key": image_key},
+    }
+    if secret:
+        msg_body["sign"] = gen_sign(timestamp, secret)
+    data = json.dumps(msg_body, ensure_ascii=False).encode("utf-8")
+    req = urllib.request.Request(
+        webhook_url, data=data,
+        headers={"Content-Type": "application/json; charset=utf-8"},
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=30) as resp:
+            return json.loads(resp.read().decode("utf-8"))
+    except Exception as e:
+        return {"code": -1, "msg": str(e)}
     return {
         "header": {
             "title": {"tag": "plain_text", "content": title},
@@ -884,23 +903,18 @@ def main():
             except Exception as e:
                 print(f"  -> 推送异常: {e}", file=sys.stderr)
 
-        # 推送第4张卡片：长图（直接展示）
+        # 推送第4条消息：长图（原生图片消息）
         if os.path.exists(png_path):
             if FEISHU_APP_ID and FEISHU_APP_SECRET:
                 print("上传长图到飞书...")
                 image_key = upload_image_to_feishu(FEISHU_APP_ID, FEISHU_APP_SECRET, png_path)
                 if image_key:
-                    print(f"推送长图卡片...")
+                    print(f"发送长图...")
                     try:
-                        img_card = build_image_card(
-                            f"🖼️ 收盘复盘长图 | {date_str}",
-                            image_key,
-                            f"A股收盘复盘长图-{date_str}",
-                        )
-                        r = send_card(WEBHOOK, img_card, SECRET)
+                        r = send_image(WEBHOOK, image_key, SECRET)
                         print(f"  -> {r}")
                     except Exception as e:
-                        print(f"  -> 长图推送异常: {e}", file=sys.stderr)
+                        print(f"  -> 长图发送异常: {e}", file=sys.stderr)
                 else:
                     print("[WARN] 图片上传失败，发送链接备用")
                     _send_fallback_image_link(png_path, image_url, date_str)
@@ -908,11 +922,7 @@ def main():
                 print("[INFO] FEISHU_APP_ID/APP_SECRET 未配置，发送链接代替")
                 _send_fallback_image_link(png_path, image_url, date_str)
         else:
-            print("[INFO] PNG长图未生成，跳过图片卡片")
-    else:
-        # 即使数据收集失败，如果PNG存在也尝试发送
-        if os.path.exists(png_path):
-            _send_fallback_image_link(png_path, image_url, date_str)
+            print("[INFO] PNG长图未生成，跳过长图")
 
     print(f"HTML_PATH={html_path}")
     print(f"PNG_PATH={png_path}")
