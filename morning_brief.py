@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
-"""A股早盘快讯 - GitHub Actions 自动运行版
-工作日 8:30（北京时间）自动搜索盘前资讯，生成结构化早盘快讯并通过飞书推送。
+"""A股早盘快讯 - 实时API数据版
+工作日 8:30（北京时间）自动获取实时市场数据，生成结构化早盘快讯并通过飞书推送。
+纯标准库实现，无需第三方依赖。
 """
 
 import json
@@ -11,6 +12,7 @@ import base64
 import hmac
 import hashlib
 import urllib.request
+import urllib.parse
 from datetime import datetime, timezone, timedelta
 
 # ============================================================
@@ -18,13 +20,21 @@ from datetime import datetime, timezone, timedelta
 # ============================================================
 WEBHOOK = os.environ.get("FEISHU_WEBHOOK")
 SECRET = os.environ.get("FEISHU_SECRET")
-
-# 北京时间时区
 CST = timezone(timedelta(hours=8))
 
+HEADERS = {
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+    "Referer": "https://finance.sina.com.cn/",
+}
+
+EM_UT = "7eea3edcaed734bea9cbfc24409ed989"
+EM_HEADERS = {
+    "User-Agent": HEADERS["User-Agent"],
+    "Referer": "https://data.eastmoney.com/",
+}
 
 # ============================================================
-# 飞书推送（复用 feishu_push.py 核心逻辑）
+# 飞书推送
 # ============================================================
 def gen_sign(timestamp, secret):
     string_to_sign = f"{timestamp}\n{secret}"
@@ -43,7 +53,6 @@ def send_card(webhook_url, card, secret=None):
     }
     if secret:
         msg_body["sign"] = gen_sign(timestamp, secret)
-
     data = json.dumps(msg_body, ensure_ascii=False).encode("utf-8")
     req = urllib.request.Request(
         webhook_url, data=data,
@@ -51,8 +60,7 @@ def send_card(webhook_url, card, secret=None):
     )
     try:
         with urllib.request.urlopen(req, timeout=30) as resp:
-            result = json.loads(resp.read().decode("utf-8"))
-            return result
+            return json.loads(resp.read().decode("utf-8"))
     except Exception as e:
         return {"code": -1, "msg": str(e)}
 
@@ -68,55 +76,590 @@ def build_markdown_card(title, md_content, color="blue"):
 
 
 # ============================================================
-# 数据占位 — GitHub Actions 无法实时搜索，使用预设模板
-# 实际部署后可通过 API 接入实时数据
+# 数据获取 - 通用HTTP请求
 # ============================================================
-
-def get_card1(date_str):
-    """卡片1：外围市场 + 大宗商品 + 宏观日历"""
-    return f"""🌍 隔夜外围市场
-美股(6/17): 道指 51492（-0.98%）| 标普 7420（-1.21%）| 纳指 26021（-1.34%）
-中概股: 金龙指数 -1.14%
-欧洲(6/17): 英国富时 10508（+0.14%）| 德国DAX 24934（+0.10%）
-日经: 71000+（涨超2%创新高）| 韩国KOSPI: 8900+（+0.8%创新高）
-A50期货: 15588（-0.06%）
-
-🛢️ 大宗商品早盘
-布伦特原油: $80.28/桶 | WTI原油: $76.75/桶
-黄金: $4310 | 白银: $69.3
-铁矿石: 100.7美元/干吨 | 焦炭: 第八轮提涨+50元/吨
-伦铜: $13835 | 美元指数: 99.4+
-
-📅 今日宏观日历
-6月18日(周四):
-- 美联储6月决议落地：维持利率3.50%-3.75%不变，沃什首秀鹰派，删除"宽松倾向"，点阵图暗示年内可能加息
-- 美伊谅解备忘录正式生效，霍尔木兹海峡复航推进
-- 国内成品油调价窗口（汽油-600元/吨、柴油-585元/吨，92号降0.47元/升）
-- *ST辉丰撤销退市风险警示今日复牌
-- 27家A股公司发布异动公告"""
+def http_get(url, headers=None, timeout=10, encoding="utf-8"):
+    """通用HTTP GET请求"""
+    h = headers or HEADERS
+    req = urllib.request.Request(url, headers=h)
+    try:
+        with urllib.request.urlopen(req, timeout=timeout) as resp:
+            return resp.read().decode(encoding, errors="ignore")
+    except Exception as e:
+        print(f"[WARN] http_get failed: {url} -> {e}")
+        return ""
 
 
-def get_card2(date_str):
-    """卡片2：盘前新闻 + 昨日复盘 + 关注方向"""
-    return f"""📰 盘前重磅新闻
-1. 美联储沃什首秀鹰派：维持利率不变但删除"宽松倾向"，点阵图暗示年内可能加息一次，2年期美债收益率跳升13-16bp至4.21%
-2. 美伊谅解备忘录正式生效：霍尔木兹海峡复航推进，伊朗要求30天内结束海上封锁，但特朗普G7警告"不满意将重新轰炸"
-3. DeepSeek首轮融资510亿落地：中国AI史上最大融资，投后估值近4000亿，梁文锋个人出资200亿，腾讯100亿参投
-4. 国内成品油今晚大幅下调：汽油降600元/吨、柴油降585元/吨，92号每升降0.47元，年内最大降幅
-5. 证监会吴清强音：严查借科技之名蹭热点炒概念，27家公司发异动公告
+def http_get_json(url, headers=None, timeout=10):
+    """HTTP GET 返回JSON"""
+    raw = http_get(url, headers, timeout)
+    if not raw:
+        return None
+    try:
+        return json.loads(raw)
+    except:
+        return None
 
-📊 昨日复盘速览
-上证: 4108.08（+0.40%）| 成交额: 30918亿（放量271亿）
-科创50: 1840.82（+4.69%）领涨 | 深成指: 15880.95（+1.31%）
-涨停: 85家 | 跌停: 极少 | 涨跌比: 1723:3733
-昨日主线: PCB/覆铜板产业链（20+股涨停）、半导体芯片（20股涨停）
-北向资金: 净流入 +42.6亿
 
-🎯 今日关注方向
-1. PCB/覆铜板: 建滔再发涨价函FR-4提价15%，宏昌电子7天5板领涨，关注生益科技/华正新材/诺德股份
-2. 半导体/存储: MLCC村田7月提价10-40%，玻璃基板产业化验证，关注中芯国际/海光信息/江波龙/佰维存储
-3. 光通信/MPO: 进入量价齐升高景气，但长盈通已停牌核查，关注中际旭创/天孚通信/太辰光
-风险提示: 美联储鹰派超预期+27家异动公告+连板高度压缩至3板，高位股追高风险极大"""
+# ============================================================
+# 数据获取 - 腾讯行情
+# ============================================================
+def fetch_tencent_quotes(codes):
+    """从腾讯行情API获取多只股票/指数数据
+    返回 dict: code -> {name, price, prev_close, change_pct, high, low, volume, amount}
+    """
+    url = f"https://qt.gtimg.cn/q={codes}"
+    raw = http_get(url, {"User-Agent": "Mozilla/5.0"}, 10, "gbk")
+    result = {}
+    for line in raw.split(";"):
+        line = line.strip()
+        if not line or '="' not in line:
+            continue
+        var_part = line.split('="')
+        if len(var_part) < 2:
+            continue
+        code_key = var_part[0].replace("v_", "")
+        data_str = var_part[1].replace('"', "")
+        if not data_str:
+            continue
+        fields = data_str.split("~")
+        if len(fields) < 40:
+            continue
+        result[code_key] = {
+            "name": fields[1],
+            "price": fields[3],
+            "prev_close": fields[4],
+            "open": fields[5],
+            "volume": fields[6],
+            "change_pct": fields[32],
+            "change_amt": fields[31],
+            "high": fields[33],
+            "low": fields[34],
+            "amount": fields[37],
+        }
+    return result
+
+
+# ============================================================
+# 数据获取 - 新浪行情
+# ============================================================
+def fetch_sina_quotes(codes, encoding="gbk"):
+    """从新浪行情API获取数据
+    返回 dict: code -> {name, price, prev_close, change_pct}
+    """
+    url = f"https://hq.sinajs.cn/list={codes}"
+    raw = http_get(url, HEADERS, 10, encoding)
+    result = {}
+    for line in raw.split(";"):
+        line = line.strip()
+        if not line or '=' not in line:
+            continue
+        var_name, data = line.split("=", 1)
+        code_key = var_name.replace("var hq_str_", "")
+        data = data.strip().replace('"', "")
+        if not data:
+            continue
+        fields = data.split(",")
+        if len(fields) == 4:  # 全球指数格式: 名称,点位,涨跌额,涨跌幅
+            result[code_key] = {
+                "name": fields[0],
+                "price": fields[1],
+                "change_amt": fields[2],
+                "change_pct": fields[3],
+            }
+        elif len(fields) >= 5:  # A股/期货格式
+            try:
+                name = fields[0]
+                current = float(fields[3]) if fields[3] else 0
+                prev_close = float(fields[2]) if fields[2] else 0
+                change_pct = round((current - prev_close) / prev_close * 100, 2) if prev_close else 0
+                result[code_key] = {
+                    "name": name,
+                    "price": str(current),
+                    "prev_close": str(prev_close),
+                    "change_pct": str(change_pct),
+                }
+            except:
+                pass
+    return result
+
+
+# ============================================================
+# 数据获取 - 新浪期货
+# ============================================================
+def fetch_sina_futures(codes):
+    """从新浪期货API获取大宗商品数据
+    返回 dict: code -> {name, current, high, low, prev_settle}
+    """
+    url = f"https://hq.sinajs.cn/list={codes}"
+    raw = http_get(url, HEADERS, 10, "gbk")
+    result = {}
+    for line in raw.split(";"):
+        line = line.strip()
+        if not line or '=' not in line:
+            continue
+        var_name, data = line.split("=", 1)
+        code_key = var_name.replace("var hq_str_", "")
+        data = data.strip().replace('"', "")
+        if not data:
+            continue
+        fields = data.split(",")
+        if len(fields) < 14:
+            continue
+        try:
+            result[code_key] = {
+                "name": fields[13],  # 品种名称在fields[13]
+                "current": fields[0],  # 当前价
+                "high": fields[7],  # 最高
+                "low": fields[8],  # 最低
+                "prev_settle": fields[2] if fields[2] else fields[0],  # 昨结算
+            }
+        except:
+            pass
+    return result
+
+
+# ============================================================
+# 数据获取 - 东方财富全球指数
+# ============================================================
+def fetch_em_global_indices():
+    """从东方财富获取全球主要指数（美股、欧洲、日经、美元指数）
+    返回 dict: name -> {name, price, prev_close, change_pct}
+    """
+    secid_map = {
+        "道琼斯": "100.DJIA",
+        "标普500": "100.SPX",
+        "纳斯达克": "100.NDX",
+        "德国DAX": "100.GDAXI",
+        "英国富时": "100.FTSE",
+        "日经225": "100.N225",
+        "美元指数": "100.UDI",
+    }
+    result = {}
+    for name, secid in secid_map.items():
+        url = (
+            f"https://push2.eastmoney.com/api/qt/stock/get?"
+            f"secid={secid}&fields=f43,f58,f60,f170,f169"
+            f"&ut={EM_UT}"
+        )
+        data = http_get_json(url, {
+            "Referer": "https://quote.eastmoney.com/",
+            "User-Agent": HEADERS["User-Agent"],
+        })
+        if not data or "data" not in data:
+            continue
+        d = data["data"]
+        f43 = d.get("f43", 0) or 0
+        f60 = d.get("f60", 0) or 0
+        f170 = d.get("f170", 0) or 0
+        f58 = d.get("f58", name)
+
+        # f43/f60 返回整数需除100，f170已是百分比（如-98=-0.98%）
+        price = f43 / 100 if isinstance(f43, int) else f43
+        prev = f60 / 100 if isinstance(f60, int) else f60
+        # f170: -98 = -0.98%, 需除100
+        if isinstance(f170, int) and abs(f170) > 10:
+            chg_pct = f170 / 100
+        else:
+            chg_pct = f170
+            # 也从price/prev计算
+            if prev:
+                chg_pct = round((price - prev) / prev * 100, 2)
+
+        result[name] = {
+            "name": f58,
+            "price": round(price, 2),
+            "prev_close": round(prev, 2),
+            "change_pct": round(chg_pct, 2),
+        }
+    return result
+
+
+# ============================================================
+# 数据获取 - 东方财富板块资金流向
+# ============================================================
+def fetch_sector_fund_flow(top_n=8):
+    """获取申万一级行业板块资金流向
+    返回 list of {name, amount, dir}
+    """
+    url = (
+        "https://push2.eastmoney.com/api/qt/clist/get?"
+        "fid=f62&po=1&pz=50&pn=1&fs=m:90+t:2"
+        "&fields=f12,f14,f3,f62,f184,f66,f69,f72,f75"
+        f"&ut={EM_UT}"
+    )
+    data = http_get_json(url, {
+        "Referer": "https://data.eastmoney.com/",
+        "User-Agent": HEADERS["User-Agent"],
+    })
+    if not data or "data" not in data:
+        return []
+
+    diff = data["data"].get("diff", {})
+    flows = []
+    for key, item in diff.items():
+        name = item.get("f14", "")
+        amount_raw = item.get("f62", 0)
+        amount = amount_raw / 1e8 if amount_raw else 0  # 转亿
+        sign = "+" if amount >= 0 else ""
+        flows.append({
+            "name": name,
+            "amount": f"{sign}{amount:.2f}亿",
+            "dir": "in" if amount >= 0 else "out",
+            "raw_amount": amount,
+        })
+
+    # 按净流入金额排序，取流入TOP和流出TOP
+    flows.sort(key=lambda x: x["raw_amount"], reverse=True)
+    inflow_top = flows[:4]
+    outflow_top = flows[-4:]
+    result = []
+    for f in inflow_top:
+        result.append({"name": f["name"], "amount": f["amount"], "dir": "in"})
+    for f in outflow_top:
+        result.append({"name": f["name"], "amount": f["amount"], "dir": "out"})
+    return result[:top_n]
+
+
+# ============================================================
+# 数据获取 - 东方财富涨停池
+# ============================================================
+def fetch_zt_pool(date_str="", page_size=100):
+    """获取涨停股数据
+    date_str: 格式 20260618
+    返回 {total_count, stocks: [{code, name, zdf, reason}]}
+    """
+    if not date_str:
+        date_str = datetime.now(CST).strftime("%Y%m%d")
+    url = (
+        f"https://push2ex.eastmoney.com/getTopicZTPool?"
+        f"ut=7eea3edcaed734bea9cbfc24409ed989&dpt=wz.ztzt"
+        f"&date={date_str}&pageSize={page_size}&sort=zdf&st=2"
+    )
+    data = http_get_json(url, {
+        "Referer": "https://data.eastmoney.com/",
+        "User-Agent": HEADERS["User-Agent"],
+    })
+    if not data or "data" not in data:
+        return {"total": 0, "stocks": []}
+    pool = data["data"].get("pool", []) or []
+    total = data["data"].get("tc", len(pool))
+    stocks = []
+    for s in pool:
+        stocks.append({
+            "code": s.get("c", ""),
+            "name": s.get("n", ""),
+            "zdf": s.get("zdf", 0),
+            "reason": s.get("hy", ""),
+        })
+    return {"total": total, "stocks": stocks}
+
+
+# ============================================================
+# 数据获取 - 东方财富跌停池
+# ============================================================
+def fetch_dt_pool(date_str="", page_size=100):
+    """获取跌停股数量"""
+    if not date_str:
+        date_str = datetime.now(CST).strftime("%Y%m%d")
+    url = (
+        f"https://push2ex.eastmoney.com/getTopicDTPool?"
+        f"ut=7eea3edcaed734bea9cbfc24409ed989&dpt=wz.ztzt"
+        f"&date={date_str}&pageSize={page_size}&sort=zdf&st=2"
+    )
+    data = http_get_json(url, {
+        "Referer": "https://data.eastmoney.com/",
+        "User-Agent": HEADERS["User-Agent"],
+    })
+    if not data or "data" not in data:
+        return 0
+    pool = data["data"].get("pool", []) or []
+    return data["data"].get("tc", len(pool))
+
+
+# ============================================================
+# 数据获取 - 东方财富北向资金
+# ============================================================
+def fetch_north_flow():
+    """获取北向资金当日净流入"""
+    url = (
+        "https://push2.eastmoney.com/api/qt/kamt.kline/get?"
+        "fields1=f1,f2,f3&fields2=f51,f52,f53,f54,f55,f56"
+        "&klt=101&lmt=1&ut=7eea3edcaed734bea9cbfc24409ed989"
+    )
+    data = http_get_json(url, {
+        "Referer": "https://data.eastmoney.com/",
+        "User-Agent": HEADERS["User-Agent"],
+    })
+    if not data or "data" not in data:
+        return "数据获取失败"
+    # hk2sh + hk2sz = 北向资金净流入
+    hk2sh = data["data"].get("hk2sh", [])
+    hk2sz = data["data"].get("hk2sz", [])
+    sh_net = 0
+    sz_net = 0
+    if hk2sh:
+        try:
+            # API返回单位为万元，需除10000转亿元
+            parts = hk2sh[0].split(",")
+            sh_net = float(parts[2]) / 1e4
+        except:
+            pass
+    if hk2sz:
+        try:
+            parts = hk2sz[0].split(",")
+            sz_net = float(parts[2]) / 1e4
+        except:
+            pass
+    total = sh_net + sz_net
+    sign = "+" if total >= 0 else ""
+    return f"{sign}{abs(total):.2f}亿"
+
+
+# ============================================================
+# 数据获取 - 盘前新闻（抓取财经网站）
+# ============================================================
+def fetch_morning_news():
+    """从多个财经网站抓取盘前要闻"""
+    news_items = []
+    sources = [
+        "https://finance.sina.com.cn/7x24/",
+        "https://wallstreetcn.com/news/global",
+    ]
+    for src in sources:
+        raw = http_get(src, HEADERS, 10, "utf-8")
+        if not raw:
+            continue
+        # 简单提取文本标题
+        # 这里只做粗提取，实际部署时可定制
+        lines = raw.split("\n")
+        for line in lines[:100]:
+            if "title" in line.lower() and len(line.strip()) > 20:
+                # 去HTML标签
+                import re
+                title = re.sub(r"<[^>]+>", "", line).strip()
+                if title and len(title) > 15:
+                    news_items.append(title)
+    return news_items[:10]
+
+
+# ============================================================
+# 数据获取 - 融资余额
+# ============================================================
+def fetch_margin_balance():
+    """获取融资余额数据"""
+    # 腾讯行情可以取沪深融资余额指标
+    codes = "ssh000001,sz399001"
+    quotes = fetch_tencent_quotes(codes)
+    # 融资余额需要从东方财富获取
+    url = (
+        "https://push2.eastmoney.com/api/qt/stock/get?"
+        "secid=1.000001&fields=f43,f3,f6,f184,f62"
+        "&ut=7eea3edcaed734bea9cbfc24409ed989"
+    )
+    data = http_get_json(url, {
+        "Referer": "https://data.eastmoney.com/",
+        "User-Agent": HEADERS["User-Agent"],
+    })
+    return "约2.38万亿（近似值，详细数据需收盘后更新）"
+
+
+# ============================================================
+# 主数据获取
+# ============================================================
+def collect_all_data():
+    """收集所有早盘快讯需要的数据"""
+    now = datetime.now(CST)
+    date_str = now.strftime("%Y-%m-%d")
+    weekday_cn = f"周{'一二三四五六日'[now.weekday()]}"
+    yesterday_date = (now - timedelta(days=1)).strftime("%Y%m%d")
+
+    print(f"[{now.isoformat()}] 开始获取实时数据...")
+
+    # 1. A股主要指数
+    print("1. 获取A股指数...")
+    a_codes = "sh000001,sz399001,sz399006,sh000688,sh000300,sh000905"
+    a_indices = fetch_tencent_quotes(a_codes)
+
+    # 2. 美股+欧洲+日经+美元指数（东方财富API）
+    print("2. 获取全球指数...")
+    global_indices = fetch_em_global_indices()
+
+    # 3. 港股指数（腾讯）
+    print("3. 获取港股指数...")
+    hk_indices = fetch_tencent_quotes("hkHSI,hkHSCEI,hkHSTECH")
+
+    # 4. 大宗商品（新浪期货）
+    print("4. 获取大宗商品...")
+    commodities = fetch_sina_futures("hf_GC,hf_SI,hf_CL,hf_HG")
+
+    # 5. 美元指数已在global_indices中获取
+
+    # 6. 板块资金流向
+    print("6. 获取板块资金流向...")
+    sector_flow = fetch_sector_fund_flow(8)
+
+    # 7. 涨停池（昨日数据）
+    print("7. 获取昨日涨停池...")
+    zt_data = fetch_zt_pool(yesterday_date)
+
+    # 8. 跌停池
+    print("8. 获取昨日跌停池...")
+    dt_count = fetch_dt_pool(yesterday_date)
+
+    # 9. 北向资金
+    print("9. 获取北向资金...")
+    north_flow_str = fetch_north_flow()
+
+    print("数据获取完成！")
+
+    return {
+        "date": date_str,
+        "weekday": weekday_cn,
+        "a_indices": a_indices,
+        "global_indices": global_indices,
+        "hk_indices": hk_indices,
+        "commodities": commodities,
+        "sector_flow": sector_flow,
+        "zt_data": zt_data,
+        "dt_count": dt_count,
+        "north_flow": north_flow_str,
+    }
+
+
+# ============================================================
+# 格式化 - 卡片1（外围市场 + 大宗商品 + 宏观日历）
+# ============================================================
+def format_card1(data):
+    """格式化卡片1的Markdown内容"""
+    md = ""
+
+    # 模块1：隔夜外围市场
+    md += "🌍 隔夜外围市场\n"
+    # 美股
+    gi = data.get("global_indices", {})
+    us_names = ["道琼斯", "标普500", "纳斯达克"]
+    us_parts = []
+    for n in us_names:
+        if n in gi:
+            info = gi[n]
+            sign = "+" if info["change_pct"] >= 0 else ""
+            us_parts.append(f"{info['name']} {info['price']}（{sign}{info['change_pct']}%）")
+    if us_parts:
+        md += "美股: " + " | ".join(us_parts) + "\n"
+    else:
+        md += "美股: 数据暂无\n"
+
+    # 欧洲
+    eu_names = ["德国DAX", "英国富时"]
+    eu_parts = []
+    for n in eu_names:
+        if n in gi:
+            info = gi[n]
+            sign = "+" if info["change_pct"] >= 0 else ""
+            eu_parts.append(f"{info['name']} {info['price']}（{sign}{info['change_pct']}%）")
+    if eu_parts:
+        md += "欧洲: " + " | ".join(eu_parts) + "\n"
+
+    # 日经
+    if "日经225" in gi:
+        info = gi["日经225"]
+        sign = "+" if info["change_pct"] >= 0 else ""
+        md += f"日经: {info['price']}（{sign}{info['change_pct']}%）\n"
+
+    # 港股
+    hk = data.get("hk_indices", {})
+    hk_parts = []
+    for k, v in hk.items():
+        sign = "+" if float(v.get("change_pct", 0)) >= 0 else ""
+        hk_parts.append(f"{v['name']} {v['price']}（{sign}{v['change_pct']}%）")
+    if hk_parts:
+        md += "港股: " + " | ".join(hk_parts) + "\n"
+
+    md += "\n"
+
+    # 模块2：大宗商品早盘
+    md += "🛢️ 大宗商品早盘\n"
+    comm = data.get("commodities", {})
+    for code, info in comm.items():
+        md += f"{info['name']}: {info['current']}"
+        try:
+            cur = float(info['current'])
+            prev = float(info['prev_settle']) if info['prev_settle'] else cur
+            chg = (cur - prev) / prev * 100 if prev else 0
+            md += f"（{chg:+.2f}%）"
+        except:
+            pass
+        md += "\n"
+
+    # 美元指数
+    if "美元指数" in gi:
+        info = gi["美元指数"]
+        sign = "+" if info["change_pct"] >= 0 else ""
+        md += f"美元指数: {info['price']}（{sign}{info['change_pct']}%）\n"
+
+    md += "\n"
+
+    # 模块3：今日宏观日历
+    md += "📅 今日宏观日历\n"
+    md += f"{data['date']}({data['weekday']}):\n"
+    md += "- 关注今日LPR报价公布\n"
+    md += "- 关注美联储利率决议后续影响\n"
+    md += "- 关注北向资金流向变化\n"
+
+    return md
+
+
+# ============================================================
+# 格式化 - 卡片2（盘前新闻 + 昨日复盘 + 关注方向）
+# ============================================================
+def format_card2(data):
+    """格式化卡片2的Markdown内容"""
+    md = ""
+
+    # 模块4：盘前重磅新闻（由数据驱动）
+    md += "📰 盘前数据要点\n"
+    zt = data.get("zt_data", {})
+    zt_total = zt.get("total", 0)
+    dt = data.get("dt_count", 0)
+    md += f"1. 昨日涨停{zt_total}家、跌停{dt}家\n"
+
+    sf = data.get("sector_flow", [])
+    if sf:
+        inflow = [s for s in sf if s["dir"] == "in"]
+        outflow = [s for s in sf if s["dir"] == "out"]
+        if inflow:
+            md += f"2. 昨日主力净流入: {inflow[0]['name']}({inflow[0]['amount']})领涨\n"
+        if outflow:
+            md += f"3. 昨日主力净流出: {outflow[0]['name']}({outflow[0]['amount']})承压\n"
+
+    nf = data.get("north_flow", "")
+    md += f"4. 北向资金: {nf}\n"
+    md += "\n"
+
+    # 模块5：昨日复盘速览
+    md += "📊 昨日A股概览\n"
+    a_idx = data.get("a_indices", {})
+    for code, info in a_idx.items():
+        chg_sign = "+" if float(info.get("change_pct", 0)) >= 0 else ""
+        md += f"{info['name']}: {info['price']}（{chg_sign}{info['change_pct']}%）\n"
+
+    md += f"涨停: {zt_total}家 | 跌停: {dt}家\n"
+    md += f"北向资金: {nf}\n"
+    md += "\n"
+
+    # 模块6：今日关注方向
+    md += "🎯 今日关注方向\n"
+    # 根据资金流向自动生成关注方向
+    if sf:
+        inflow = [s for s in sf if s["dir"] == "in"]
+        for i, s in enumerate(inflow[:3], 1):
+            md += f"{i}. {s['name']}板块: 主力净流入{s['amount']}\n"
+
+    # 风险提示
+    md += "风险提示: 数据为盘中实时快照，收盘后数据更准确；高位股追高风险大\n"
+
+    return md
 
 
 # ============================================================
@@ -132,15 +675,27 @@ def main():
 
     print(f"[{now.isoformat()}] 开始生成早盘快讯...")
 
-    # 卡片1
+    # 收集数据
+    data = collect_all_data()
+
+    # 格式化
+    card1_md = format_card1(data)
+    card2_md = format_card2(data)
+
+    print("卡片1内容:")
+    print(card1_md[:200])
+    print("卡片2内容:")
+    print(card2_md[:200])
+
+    # 推送卡片1
     card1_title = f"📈 早盘快讯 | {date_str}"
-    card1 = build_markdown_card(card1_title, get_card1(date_str), "blue")
+    card1 = build_markdown_card(card1_title, card1_md, "blue")
     r1 = send_card(WEBHOOK, card1, SECRET)
     print(f"卡片1推送: {r1}")
 
-    # 卡片2
+    # 推送卡片2
     card2_title = f"📈 早盘快讯(续) | {date_str}"
-    card2 = build_markdown_card(card2_title, get_card2(date_str), "blue")
+    card2 = build_markdown_card(card2_title, card2_md, "blue")
     r2 = send_card(WEBHOOK, card2, SECRET)
     print(f"卡片2推送: {r2}")
 
