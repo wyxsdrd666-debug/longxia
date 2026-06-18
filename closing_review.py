@@ -89,6 +89,10 @@ def send_image(webhook_url, image_key, secret=None):
             return json.loads(resp.read().decode("utf-8"))
     except Exception as e:
         return {"code": -1, "msg": str(e)}
+
+
+def build_markdown_card(title, md_content, color="blue"):
+    """构建飞书交互式卡片消息体"""
     return {
         "header": {
             "title": {"tag": "plain_text", "content": title},
