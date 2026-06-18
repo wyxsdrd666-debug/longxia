@@ -377,9 +377,12 @@ def fetch_zt_pool(top_n=30):
         else:
             if chg_real < 9.0:  # 10%涨停板，允许1%波动
                 continue
+        price_raw = item.get("f2", 0) or 0
+        price = price_raw / 100 if isinstance(price_raw, int) and price_raw > 1000 else price_raw
         stocks.append({
             "code": code,
             "name": item.get("f14", ""),
+            "price": price,
             "zdf": chg_real,
             "reason": item.get("f100", ""),  # 所属行业
             "ltsz": item.get("f20", 0) or 0,  # 总市值
@@ -640,30 +643,43 @@ def generate_html(data):
         c = "#e74c3c" if idx["change_pct"] >= 0 else "#27ae60"
         idx_rows += f'<tr><td>{idx["name"]}</td><td style="color:{c}">{idx["price"]}</td><td style="color:{c}">{chg_sign}{idx["change_pct"]}%</td></tr>\n'
 
-    # 热点板块与涨停龙头（合并）
+    # 热点板块与涨停龙头（合并，卡片式布局）
     zt_stocks = data["zt_data"].get("stocks", [])
-    # 构建概念→龙头股映射
+    # 构建概念→涨停股列表映射（含名称和涨幅）
     concept_leader_map = {}
     for ct in data["concept_top"]:
-        leaders = []
+        stocks_in_concept = []
         for s in zt_stocks:
             reason = s.get("reason", "")
             if ct["name"] in reason or reason == ct["name"]:
-                leaders.append(s["name"])
-        concept_leader_map[ct["name"]] = leaders[:4]  # 每个概念最多4只龙头
+                stocks_in_concept.append({
+                    "name": s["name"],
+                    "zdf": s["zdf"],
+                    "code": s.get("code", ""),
+                })
+        concept_leader_map[ct["name"]] = stocks_in_concept[:6]  # 每个概念最多6只
 
     concept_block = ""
     for ct in data["concept_top"]:
         pct = ct["change_pct"]
         pct_color = "#e74c3c" if pct > 0 else "#27ae60"
         leaders = concept_leader_map.get(ct["name"], [])
-        leader_str = "、".join(leaders) if leaders else "—"
+        cnt = len(leaders)
+        stock_lines = ""
+        for ld in leaders:
+            stock_lines += f'<div class="stock-row"><span class="stock-name">{ld["name"]}</span><span class="stock-pct" style="color:{pct_color}">{ld["zdf"]:+.2f}%</span></div>'
+        if not leaders:
+            stock_lines = '<div class="stock-row" style="color:#aaa;">暂无涨停个股</div>'
         concept_block += f"""
-        <tr>
-            <td style="font-weight:bold;width:18%;">{ct["name"]}</td>
-            <td style="color:{pct_color};width:12%;">{pct:+.2f}%</td>
-            <td style="color:#555;font-size:12px;">{leader_str}</td>
-        </tr>"""
+        <div class="concept-card">
+            <div class="concept-header">
+                <span class="concept-name">{ct["name"]}</span>
+                <span class="concept-badge">{cnt}只</span>
+            </div>
+            <div class="concept-body">
+                {stock_lines}
+            </div>
+        </div>"""
 
     # 板块资金
     flow_rows = ""
@@ -721,6 +737,17 @@ tr:last-child td {{ border-bottom: none; }}
 .risk {{ color: #27ae60; font-weight: bold; }}
 .profit {{ color: #e74c3c; font-weight: bold; }}
 .highlight {{ color: #e74c3c; }}
+/* 概念卡片网格 */
+.concept-grid {{ display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }}
+.concept-card {{ background: #fafbfc; border-radius: 6px; border: 1px solid #e8ecf1; overflow: hidden; }}
+.concept-header {{ background: linear-gradient(90deg,#eef2f7,#fafbfc); padding: 8px 12px; border-bottom: 1px solid #e8ecf1; display: flex; justify-content: space-between; align-items: center; }}
+.concept-name {{ font-weight: bold; font-size: 13px; color: #1a3a5c; }}
+.concept-badge {{ background: #e74c3c; color: #fff; font-size: 11px; padding: 2px 8px; border-radius: 10px; }}
+.concept-body {{ padding: 6px 12px 8px; }}
+.stock-row {{ display: flex; justify-content: space-between; align-items: center; padding: 4px 0; border-bottom: 1px dotted #f0f0f0; font-size: 12px; }}
+.stock-row:last-child {{ border-bottom: none; }}
+.stock-name {{ color: #555; }}
+.stock-pct {{ font-weight: bold; font-size: 12px; white-space: nowrap; }}
 </style>
 </head>
 <body>
@@ -756,7 +783,7 @@ tr:last-child td {{ border-bottom: none; }}
 <div class="section">
     <div class="section-title">🔥 热点板块与涨停龙头</div>
     <div class="section-content">
-        <table><tr><th>概念板块</th><th>涨幅</th><th>涨停龙头股</th></tr>{concept_block}</table>
+        <div class="concept-grid">{concept_block}</div>
     </div>
 </div>
 
