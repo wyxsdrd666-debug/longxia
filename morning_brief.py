@@ -717,6 +717,9 @@ def main():
     r1 = send_card(WEBHOOK, card1, SECRET)
     print(f"卡片1推送: {r1}")
 
+    # 消息间延迟1.5秒，避免飞书频率限制
+    time.sleep(1.5)
+
     # 推送卡片2
     card2_title = f"📈 早盘快讯(续) | {date_str}"
     card2 = build_markdown_card(card2_title, card2_md, "blue")
