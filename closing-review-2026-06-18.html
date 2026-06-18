@@ -29,6 +29,17 @@ tr:last-child td { border-bottom: none; }
 .risk { color: #27ae60; font-weight: bold; }
 .profit { color: #e74c3c; font-weight: bold; }
 .highlight { color: #e74c3c; }
+/* 概念卡片网格 */
+.concept-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.concept-card { background: #fafbfc; border-radius: 6px; border: 1px solid #e8ecf1; overflow: hidden; }
+.concept-header { background: linear-gradient(90deg,#eef2f7,#fafbfc); padding: 8px 12px; border-bottom: 1px solid #e8ecf1; display: flex; justify-content: space-between; align-items: center; }
+.concept-name { font-weight: bold; font-size: 13px; color: #1a3a5c; }
+.concept-badge { background: #e74c3c; color: #fff; font-size: 11px; padding: 2px 8px; border-radius: 10px; }
+.concept-body { padding: 6px 12px 8px; }
+.stock-row { display: flex; justify-content: space-between; align-items: center; padding: 4px 0; border-bottom: 1px dotted #f0f0f0; font-size: 12px; }
+.stock-row:last-child { border-bottom: none; }
+.stock-name { color: #555; }
+.stock-pct { font-weight: bold; font-size: 12px; white-space: nowrap; }
 </style>
 </head>
 <body>
@@ -70,37 +81,61 @@ tr:last-child td { border-bottom: none; }
 <div class="section">
     <div class="section-title">🔥 热点板块与涨停龙头</div>
     <div class="section-content">
-        <table><tr><th>概念板块</th><th>涨幅</th><th>涨停龙头股</th></tr>
-        <tr>
-            <td style="font-weight:bold;width:18%;">蓝宝石</td>
-            <td style="color:#e74c3c;width:12%;">+399.00%</td>
-            <td style="color:#555;font-size:12px;">—</td>
-        </tr>
-        <tr>
-            <td style="font-weight:bold;width:18%;">Kimi概念</td>
-            <td style="color:#e74c3c;width:12%;">+303.00%</td>
-            <td style="color:#555;font-size:12px;">—</td>
-        </tr>
-        <tr>
-            <td style="font-weight:bold;width:18%;">高带宽内存</td>
-            <td style="color:#e74c3c;width:12%;">+301.00%</td>
-            <td style="color:#555;font-size:12px;">—</td>
-        </tr>
-        <tr>
-            <td style="font-weight:bold;width:18%;">科技风格</td>
-            <td style="color:#e74c3c;width:12%;">+283.00%</td>
-            <td style="color:#555;font-size:12px;">—</td>
-        </tr>
-        <tr>
-            <td style="font-weight:bold;width:18%;">先进封装</td>
-            <td style="color:#e74c3c;width:12%;">+281.00%</td>
-            <td style="color:#555;font-size:12px;">—</td>
-        </tr>
-        <tr>
-            <td style="font-weight:bold;width:18%;">CPO概念</td>
-            <td style="color:#e74c3c;width:12%;">+274.00%</td>
-            <td style="color:#555;font-size:12px;">—</td>
-        </tr></table>
+        <div class="concept-grid">
+        <div class="concept-card">
+            <div class="concept-header">
+                <span class="concept-name">蓝宝石</span>
+                <span class="concept-badge">0只</span>
+            </div>
+            <div class="concept-body">
+                <div class="stock-row" style="color:#aaa;">暂无涨停个股</div>
+            </div>
+        </div>
+        <div class="concept-card">
+            <div class="concept-header">
+                <span class="concept-name">Kimi概念</span>
+                <span class="concept-badge">0只</span>
+            </div>
+            <div class="concept-body">
+                <div class="stock-row" style="color:#aaa;">暂无涨停个股</div>
+            </div>
+        </div>
+        <div class="concept-card">
+            <div class="concept-header">
+                <span class="concept-name">高带宽内存</span>
+                <span class="concept-badge">0只</span>
+            </div>
+            <div class="concept-body">
+                <div class="stock-row" style="color:#aaa;">暂无涨停个股</div>
+            </div>
+        </div>
+        <div class="concept-card">
+            <div class="concept-header">
+                <span class="concept-name">科技风格</span>
+                <span class="concept-badge">0只</span>
+            </div>
+            <div class="concept-body">
+                <div class="stock-row" style="color:#aaa;">暂无涨停个股</div>
+            </div>
+        </div>
+        <div class="concept-card">
+            <div class="concept-header">
+                <span class="concept-name">先进封装</span>
+                <span class="concept-badge">0只</span>
+            </div>
+            <div class="concept-body">
+                <div class="stock-row" style="color:#aaa;">暂无涨停个股</div>
+            </div>
+        </div>
+        <div class="concept-card">
+            <div class="concept-header">
+                <span class="concept-name">CPO概念</span>
+                <span class="concept-badge">0只</span>
+            </div>
+            <div class="concept-body">
+                <div class="stock-row" style="color:#aaa;">暂无涨停个股</div>
+            </div>
+        </div></div>
     </div>
 </div>
 
@@ -122,10 +157,10 @@ tr:last-child td { border-bottom: none; }
 <div class="section">
     <div class="section-title">🛢️ 大宗商品行情</div>
     <div class="section-content">
-        <table><tr><th>品种</th><th>价格</th><th>涨跌</th></tr><tr><td>纽约黄金</td><td>4295.461</td><td>-0.06%</td></tr>
-<tr><td>纽约白银</td><td>68.877</td><td>-0.06%</td></tr>
-<tr><td>纽约原油</td><td>73.861</td><td>-0.04%</td></tr>
-<tr><td>美铜</td><td>645.635</td><td>-0.04%</td></tr>
+        <table><tr><th>品种</th><th>价格</th><th>涨跌</th></tr><tr><td>纽约黄金</td><td>4285.444</td><td>-0.02%</td></tr>
+<tr><td>纽约白银</td><td>68.680</td><td>+0.06%</td></tr>
+<tr><td>纽约原油</td><td>73.889</td><td>-0.06%</td></tr>
+<tr><td>美铜</td><td>644.075</td><td>-0.01%</td></tr>
 </table>
     </div>
 </div>
@@ -138,9 +173,9 @@ tr:last-child td { border-bottom: none; }
 <tr><td style="color:#e74c3c;font-weight:bold;">国家能源局：5月份全社会用电量同比增长6.9%</td><td style="color:#888;font-size:12px;">月份，全社会用电量8671亿千瓦时，同比增长6.9%。从分产业用电看，第一产业用电量124亿千瓦时，同比增长5.0%。第二产业用电量5753亿千瓦时，同比增长6.0%；其中，工业用电量5703亿千瓦时</td></tr>
 <tr><td style="color:#e74c3c;font-weight:bold;">市场监管总局督导货拉拉落实反垄断合规整改</td><td style="color:#888;font-size:12px;">期，市场监管总局依据《中华人民共和国反垄断法》公开约谈货拉拉，要求其停止利用算法不合理压低货运价格、利用平台规则实施强制独家车贴等行为，全面开展自查整改，依法合规经营，主动回应各方关切，自觉接受社会监</td></tr>
 <tr><td style="color:#e74c3c;font-weight:bold;">商务部等八部门发布《关于加快“人工智能+消费”发展的实施意见》</td><td style="color:#888;font-size:12px;">天（18日），商务部等八部门发布《关于加快“人工智能+消费”发展的实施意见》，围绕提升人工智能+商品消费、扩大人工智能+服务消费等五方面，提出17项具体举措，促进人工智能进千家万户、进千商万店，更好满</td></tr>
+<tr><td style="color:#e74c3c;font-weight:bold;">资金逃离“老登”股！保险、银行、券商等金融板块集体下挫 股民：我心态崩了</td><td style="color:#888;font-size:12px;">天的市场，依旧是科技，科技，还是科技！资金不断逃离“老登”股。有股民称：“我心态崩了，投降了。”</td></tr>
 <tr><td style="color:#e74c3c;font-weight:bold;">G7称降低对中国关键矿产的依赖 外交部：中方立场没有变化</td><td style="color:#888;font-size:12px;">透社记者提问，G7峰会发表的声明中称，将降低对中国稀土和关键矿产的依赖。请问外交部对此有何评论？林剑表示，中方维护关键矿产全球产供链稳定与安全的立场没有变化，同时各方都有责任，为此发挥建设性作用。中方</td></tr>
 <tr><td style="color:#e74c3c;font-weight:bold;">寒武纪再创新高 否认向互联网厂商大量供货</td><td style="color:#888;font-size:12px;">息面上，近期有关于国内互联网公司采购国产算力的消息。行业人士称字节跳动正在与天数智芯（09903.HK）讨论采购至少5万颗AI芯片，主要用于推理工作，华为、寒武纪也是字节跳动的供应商。</td></tr>
-<tr><td style="color:#e74c3c;font-weight:bold;">七部门联合印发《促进平台经济大中小企业协同发展行动方案》</td><td style="color:#888;font-size:12px;">行动方案》以习近平新时代中国特色社会主义思想为指导，全面贯彻党的二十大和二十届历次全会精神，深入落实党中央、国务院关于促进平台经济创新健康发展的决策部署，系统推进大中小企业创新协同、生态协同、开放协同</td></tr>
 </table>
     </div>
 </div>
