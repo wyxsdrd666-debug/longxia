@@ -44,17 +44,12 @@ tr:last-child td { border-bottom: none; }
 .flow-bar { height: 100%; border-radius: 6px; }
 .flow-amt { width: 70px; font-weight: bold; font-size: 11px; white-space: nowrap; }
 
-/* 概念双列卡片 */
-.ccard-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-.ccard { background: #fafbfc; border-radius: 6px; border: 1px solid #e8ecf1; overflow: hidden; }
-.ccard-hd { background: #eef2f7; padding: 7px 10px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #e0e4ea; }
-.ccard-title { font-weight: bold; font-size: 12px; color: #2c3e50; }
-.ccard-badge { background: #e74c3c; color: #fff; font-size: 10px; padding: 2px 7px; border-radius: 9px; }
-.ccard-bd { padding: 5px 10px 7px; }
-.ld-row { display: flex; justify-content: space-between; padding: 3px 0; border-bottom: 1px dotted #f0f0f0; font-size: 11px; }
-.ld-row:last-child { border-bottom: none; }
-.ld-name { color: #666; }
-.ld-pct { font-weight: bold; }
+/* 热点板块列表 */
+.hl-concept { padding-right: 8px; vertical-align: top; }
+.hl-concept-name { font-weight: bold; color: #2c3e50; font-size: 13px; }
+.hl-concept-cnt { color: #e74c3c; font-size: 11px; margin-left: 2px; }
+.hl-stocks { font-size: 12px; line-height: 1.9; color: #555; }
+.hl-stock { color: #2c3e50; font-weight: 500; }
 
 /* 热点资讯 */
 .n-item { padding: 5px 0; border-bottom: 1px dotted #f0f0f0; font-size: 12px; line-height: 1.6; }
@@ -107,7 +102,7 @@ tr:last-child td { border-bottom: none; }
 </div>
 
 <div class="section">
-    <div class="section-title"><span class="icon">🏷️</span> 涨停概念分布</div>
+    <div class="section-title"><span class="icon">🏷️</span> 涨停概念分布图</div>
     <div class="section-content">
         <div class="ctags"><span class="ctag" style="background:#e74c3c;">蓝宝石(0只)</span><span class="ctag" style="background:#f39c12;">Kimi概念(0只)</span><span class="ctag" style="background:#e056a0;">高带宽内存(0只)</span><span class="ctag" style="background:#9b59b6;">科技风格(0只)</span><span class="ctag" style="background:#3498db;">先进封装(0只)</span><span class="ctag" style="background:#1abc9c;">CPO概念(0只)</span></div>
     </div>
@@ -138,7 +133,31 @@ tr:last-child td { border-bottom: none; }
 <div class="section">
     <div class="section-title"><span class="icon">🔥</span> 热点板块与涨停代表个股</div>
     <div class="section-content">
-        <div class="ccard-grid"><div class="ccard"><div class="ccard-hd"><span class="ccard-title">蓝宝石</span><span class="ccard-badge">0只</span></div><div class="ccard-bd"><div style="color:#aaa;font-size:12px;">暂无涨停个股</div></div></div><div class="ccard"><div class="ccard-hd"><span class="ccard-title">Kimi概念</span><span class="ccard-badge">0只</span></div><div class="ccard-bd"><div style="color:#aaa;font-size:12px;">暂无涨停个股</div></div></div><div class="ccard"><div class="ccard-hd"><span class="ccard-title">高带宽内存</span><span class="ccard-badge">0只</span></div><div class="ccard-bd"><div style="color:#aaa;font-size:12px;">暂无涨停个股</div></div></div><div class="ccard"><div class="ccard-hd"><span class="ccard-title">科技风格</span><span class="ccard-badge">0只</span></div><div class="ccard-bd"><div style="color:#aaa;font-size:12px;">暂无涨停个股</div></div></div><div class="ccard"><div class="ccard-hd"><span class="ccard-title">先进封装</span><span class="ccard-badge">0只</span></div><div class="ccard-bd"><div style="color:#aaa;font-size:12px;">暂无涨停个股</div></div></div><div class="ccard"><div class="ccard-hd"><span class="ccard-title">CPO概念</span><span class="ccard-badge">0只</span></div><div class="ccard-bd"><div style="color:#aaa;font-size:12px;">暂无涨停个股</div></div></div></div>
+        <table class="hl-table"><tr><th style="width:95px;">热点板块</th><th>代表个股及涨幅</th></tr>
+        <tr>
+            <td class="hl-concept" style="width:95px;"><span class="hl-concept-name">蓝宝石</span><span class="hl-concept-cnt">(0只)</span></td>
+            <td class="hl-stocks"><span style="color:#aaa;">暂无涨停个股</span></td>
+        </tr>
+        <tr>
+            <td class="hl-concept" style="width:95px;"><span class="hl-concept-name">Kimi概念</span><span class="hl-concept-cnt">(0只)</span></td>
+            <td class="hl-stocks"><span style="color:#aaa;">暂无涨停个股</span></td>
+        </tr>
+        <tr>
+            <td class="hl-concept" style="width:95px;"><span class="hl-concept-name">高带宽内存</span><span class="hl-concept-cnt">(0只)</span></td>
+            <td class="hl-stocks"><span style="color:#aaa;">暂无涨停个股</span></td>
+        </tr>
+        <tr>
+            <td class="hl-concept" style="width:95px;"><span class="hl-concept-name">科技风格</span><span class="hl-concept-cnt">(0只)</span></td>
+            <td class="hl-stocks"><span style="color:#aaa;">暂无涨停个股</span></td>
+        </tr>
+        <tr>
+            <td class="hl-concept" style="width:95px;"><span class="hl-concept-name">先进封装</span><span class="hl-concept-cnt">(0只)</span></td>
+            <td class="hl-stocks"><span style="color:#aaa;">暂无涨停个股</span></td>
+        </tr>
+        <tr>
+            <td class="hl-concept" style="width:95px;"><span class="hl-concept-name">CPO概念</span><span class="hl-concept-cnt">(0只)</span></td>
+            <td class="hl-stocks"><span style="color:#aaa;">暂无涨停个股</span></td>
+        </tr></table>
     </div>
 </div>
 
@@ -156,12 +175,12 @@ tr:last-child td { border-bottom: none; }
             <span class="lbl" style="color:#999;">北向资金</span> 净<span class="profit">+1040.00亿</span>&nbsp;&nbsp;
             沪股通 <span class="profit">+520.00亿</span>&nbsp;&nbsp;
             深股通 <span class="profit">+520.00亿</span>
-            &nbsp;&nbsp;|&nbsp;&nbsp;<span class="lbl" style="color:#999;">美元指数</span> 100.6（+0.21%）
+            &nbsp;&nbsp;|&nbsp;&nbsp;<span class="lbl" style="color:#999;">美元指数</span> 100.59（+0.20%）
         </div>
-        <table><tr><th>品种</th><th>价格</th><th>涨跌</th></tr><tr><td>纽约黄金</td><td>4283.947</td><td>-0.02%</td></tr>
-<tr><td>纽约白银</td><td>68.774</td><td>-0.00%</td></tr>
-<tr><td>纽约原油</td><td>73.975</td><td>-0.06%</td></tr>
-<tr><td>美铜</td><td>643.906</td><td>-0.01%</td></tr>
+        <table><tr><th>品种</th><th>价格</th><th>涨跌</th></tr><tr><td>纽约黄金</td><td>4287.700</td><td>-0.03%</td></tr>
+<tr><td>纽约白银</td><td>68.790</td><td>-0.04%</td></tr>
+<tr><td>纽约原油</td><td>73.834</td><td>-0.06%</td></tr>
+<tr><td>美铜</td><td>644.480</td><td>-0.03%</td></tr>
 </table>
     </div>
 </div>
@@ -169,7 +188,7 @@ tr:last-child td { border-bottom: none; }
 <div class="section">
     <div class="section-title"><span class="icon">📰</span> 盘后热点资讯</div>
     <div class="section-content">
-        <div class="n-item"><span class="n-title">燧原科技股份有限公司科创板IPO审核状态变更为提交注册</span> <span class="n-digest">据上交所官网，上海燧原科技股份有限公司科创板IPO审核状态变更为提交注册。</span></div><div class="n-item"><span class="n-title">瑞士外交部：美伊会谈19日在比尔根山举行</span> <span class="n-digest">士外交部18日表示，美国和伊朗计划与调解方巴基斯坦、卡塔尔及其他相关国家于19日</span></div><div class="n-item"><span class="n-title">6月18日港股收盘：恒指跌1.59% 恒生科技指数跌1.39%</span> <span class="n-digest">生指数收报23924.81点，跌387.35点，跌幅1.59%；恒生科技指数收报</span></div><div class="n-item"><span class="n-title">6月18日涨停复盘：101只股涨停 旭光电子11天6板</span> <span class="n-digest">停个股数量方面，今日共计101股涨停，另有55只个股盘中一度触及涨停，封板率64</span></div><div class="n-item"><span class="n-title">国家能源局：5月份全社会用电量同比增长6.9%</span> <span class="n-digest">月份，全社会用电量8671亿千瓦时，同比增长6.9%。从分产业用电看，第一产业用</span></div><div class="n-item"><span class="n-title">市场监管总局督导货拉拉落实反垄断合规整改</span> <span class="n-digest">期，市场监管总局依据《中华人民共和国反垄断法》公开约谈货拉拉，要求其停止利用算法</span></div>
+        <div class="n-item"><span class="n-title">燧原科技科创板IPO审核状态变更为提交注册</span> <span class="n-digest">上交所官网，上海燧原科技股份有限公司科创板IPO审核状态变更为提交注册。</span></div><div class="n-item"><span class="n-title">宁德时代枧下窝锂矿重获项目用地意见书</span> <span class="n-digest">天下午，界面新闻记者从江西省自然资源厅国土空间用途管制处获悉，宜春时代新能源矿业</span></div><div class="n-item"><span class="n-title">瑞士外交部：美伊会谈19日在比尔根山举行</span> <span class="n-digest">士外交部18日表示，美国和伊朗计划与调解方巴基斯坦、卡塔尔及其他相关国家于19日</span></div><div class="n-item"><span class="n-title">6月18日港股收盘：恒指跌1.59% 恒生科技指数跌1.39%</span> <span class="n-digest">生指数收报23924.81点，跌387.35点，跌幅1.59%；恒生科技指数收报</span></div><div class="n-item"><span class="n-title">6月18日涨停复盘：101只股涨停 旭光电子11天6板</span> <span class="n-digest">停个股数量方面，今日共计101股涨停，另有55只个股盘中一度触及涨停，封板率64</span></div><div class="n-item"><span class="n-title">国家能源局：5月份全社会用电量同比增长6.9%</span> <span class="n-digest">月份，全社会用电量8671亿千瓦时，同比增长6.9%。从分产业用电看，第一产业用</span></div>
     </div>
 </div>
 
