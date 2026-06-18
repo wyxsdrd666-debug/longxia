@@ -640,19 +640,30 @@ def generate_html(data):
         c = "#e74c3c" if idx["change_pct"] >= 0 else "#27ae60"
         idx_rows += f'<tr><td>{idx["name"]}</td><td style="color:{c}">{idx["price"]}</td><td style="color:{c}">{chg_sign}{idx["change_pct"]}%</td></tr>\n'
 
-    # 概念板块
-    concept_rows = ""
+    # 热点板块与涨停龙头（合并）
     zt_stocks = data["zt_data"].get("stocks", [])
+    # 构建概念→龙头股映射
+    concept_leader_map = {}
     for ct in data["concept_top"]:
-        # 从涨停池中找该概念对应的龙头
-        leader = ""
-        for s in zt_stocks[:20]:
-            if s.get("reason", "") == ct["name"] or ct["name"] in s.get("reason", ""):
-                leader = s["name"]
-                break
-        if not leader:
-            leader = "—"
-        concept_rows += f'<tr><td>{ct["name"]}</td><td class="num">{ct["change_pct"]:+.2f}%</td><td>{leader}</td></tr>\n'
+        leaders = []
+        for s in zt_stocks:
+            reason = s.get("reason", "")
+            if ct["name"] in reason or reason == ct["name"]:
+                leaders.append(s["name"])
+        concept_leader_map[ct["name"]] = leaders[:4]  # 每个概念最多4只龙头
+
+    concept_block = ""
+    for ct in data["concept_top"]:
+        pct = ct["change_pct"]
+        pct_color = "#e74c3c" if pct > 0 else "#27ae60"
+        leaders = concept_leader_map.get(ct["name"], [])
+        leader_str = "、".join(leaders) if leaders else "—"
+        concept_block += f"""
+        <tr>
+            <td style="font-weight:bold;width:18%;">{ct["name"]}</td>
+            <td style="color:{pct_color};width:12%;">{pct:+.2f}%</td>
+            <td style="color:#555;font-size:12px;">{leader_str}</td>
+        </tr>"""
 
     # 板块资金
     flow_rows = ""
@@ -661,17 +672,12 @@ def generate_html(data):
         tag = "流入" if fl["dir"] == "in" else "流出"
         flow_rows += f'<tr><td>{fl["name"]}</td><td style="color:{c}">{tag} {fl["amount"]}</td></tr>\n'
 
-    # 涨停龙头
-    leader_rows = ""
-    for ld in zt_stocks[:6]:
-        leader_rows += f'<tr><td>{ld["name"]}</td><td>{ld["code"]}</td><td class="num">{ld["zdf"]:+.1f}%</td><td>{ld["reason"]}</td></tr>\n'
-
     # 大宗商品
     comm_rows = ""
     for code, cm in data["commodities"].items():
         comm_rows += f'<tr><td>{cm["name"]}</td><td>{cm["price"]}</td><td>{cm["change_pct"]}</td></tr>\n'
 
-    # 北向资金
+    # 北向资金（仅情绪仪表里一行）
     nf = data["north_flow"]
 
     # 盘后热点资讯
@@ -680,7 +686,7 @@ def generate_html(data):
         title = n["title"]
         digest = n.get("digest", "")
         if digest:
-            news_rows += f'<tr><td style="color:#e74c3c;font-weight:bold;">{escape(title)}</td><td style="color:#aab;font-size:12px;">{escape(digest)}</td></tr>\n'
+            news_rows += f'<tr><td style="color:#e74c3c;font-weight:bold;">{escape(title)}</td><td style="color:#888;font-size:12px;">{escape(digest)}</td></tr>\n'
         else:
             news_rows += f'<tr><td style="color:#e74c3c;font-weight:bold;">{escape(title)}</td><td>—</td></tr>\n'
 
@@ -692,29 +698,29 @@ def generate_html(data):
 <title>A股收盘复盘 | {date_str}</title>
 <style>
 * {{ margin: 0; padding: 0; box-sizing: border-box; }}
-body {{ font-family: "Microsoft YaHei","PingFang SC",sans-serif; background: #0a0e27; color: #e0e0e0; width: 800px; margin: 0 auto; }}
-.header {{ background: linear-gradient(135deg,#1a1a3e,#0d1b3e,#1a1a3e); padding: 28px 24px; text-align: center; border-bottom: 2px solid #2a4a8a; }}
+body {{ font-family: "Microsoft YaHei","PingFang SC",sans-serif; background: #f5f6fa; color: #2c3e50; width: 800px; margin: 0 auto; }}
+.header {{ background: linear-gradient(135deg,#1a3a5c,#2c5f8a,#1a3a5c); padding: 28px 24px; text-align: center; border-bottom: 3px solid #e74c3c; }}
 .header h1 {{ font-size: 24px; color: #fff; margin-bottom: 6px; }}
-.header .sub {{ font-size: 13px; color: #8899bb; }}
+.header .sub {{ font-size: 13px; color: #a0c4e8; }}
 .header .date {{ font-size: 14px; color: #ffd700; margin-top: 4px; }}
-.section {{ margin: 16px 12px; background: #111633; border-radius: 8px; overflow: hidden; border: 1px solid #1e2a4a; }}
-.section-title {{ background: linear-gradient(90deg,#1a2d5a,#111633); padding: 10px 16px; font-size: 15px; font-weight: bold; color: #ffd700; border-bottom: 1px solid #2a3a5a; }}
+.section {{ margin: 16px 12px; background: #fff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.06); }}
+.section-title {{ background: linear-gradient(90deg,#eef2f7,#fff); padding: 12px 16px; font-size: 15px; font-weight: bold; color: #1a3a5c; border-bottom: 1px solid #e8ecf1; }}
 .section-content {{ padding: 12px 16px; }}
 table {{ width: 100%; border-collapse: collapse; font-size: 13px; }}
-th {{ background: #1a2540; color: #8899bb; font-weight: normal; padding: 8px 10px; text-align: left; font-size: 12px; border-bottom: 1px solid #2a3a5a; }}
-td {{ padding: 7px 10px; border-bottom: 1px solid #1a2540; }}
+th {{ background: #f0f3f8; color: #7f8c8d; font-weight: bold; padding: 8px 10px; text-align: left; font-size: 12px; border-bottom: 2px solid #e8ecf1; }}
+td {{ padding: 7px 10px; border-bottom: 1px solid #f0f3f8; }}
 tr:last-child td {{ border-bottom: none; }}
 .num {{ text-align: right; }}
 .sentiment-box {{ display: flex; align-items: center; gap: 16px; }}
-.sentiment-gauge {{ width: 80px; height: 80px; border-radius: 50%; background: conic-gradient({temp_color} 0% {s_temp}%,#1a2540 {s_temp}% 100%); display: flex; align-items: center; justify-content: center; }}
-.sentiment-inner {{ width: 58px; height: 58px; border-radius: 50%; background: #111633; display: flex; align-items: center; justify-content: center; font-size: 20px; font-weight: bold; color: {temp_color}; }}
+.sentiment-gauge {{ width: 80px; height: 80px; border-radius: 50%; background: conic-gradient({temp_color} 0% {s_temp}%,#eee {s_temp}% 100%); display: flex; align-items: center; justify-content: center; }}
+.sentiment-inner {{ width: 58px; height: 58px; border-radius: 50%; background: #fff; display: flex; align-items: center; justify-content: center; font-size: 20px; font-weight: bold; color: {temp_color}; }}
 .sentiment-stats {{ flex: 1; font-size: 12px; line-height: 1.8; }}
-.sentiment-stats span {{ color: #8899bb; }}
-.sentiment-stats .val {{ color: #ffd700; font-weight: bold; }}
-.footer {{ text-align: center; padding: 16px; color: #556; font-size: 11px; border-top: 1px solid #1e2a4a; margin-top: 12px; }}
+.sentiment-stats span {{ color: #95a5a6; }}
+.sentiment-stats .val {{ color: #2c3e50; font-weight: bold; }}
+.footer {{ text-align: center; padding: 16px; color: #aaa; font-size: 11px; border-top: 1px solid #eee; margin-top: 12px; }}
 .risk {{ color: #27ae60; font-weight: bold; }}
 .profit {{ color: #e74c3c; font-weight: bold; }}
-.highlight {{ color: #ffd700; }}
+.highlight {{ color: #e74c3c; }}
 </style>
 </head>
 <body>
@@ -722,7 +728,7 @@ tr:last-child td {{ border-bottom: none; }}
 <div class="header">
     <h1>A股收盘复盘报告</h1>
     <div class="date">{date_str} {wd}收盘 | 总成交额 {data['total_amount']}亿</div>
-    <div class="sub">14模块全景复盘 · AI自动生成 · 实时API数据</div>
+    <div class="sub">实时API数据 · 多板块全景复盘 · 仅供参考不构成投资建议</div>
 </div>
 
 <div class="section">
@@ -748,31 +754,16 @@ tr:last-child td {{ border-bottom: none; }}
 </div>
 
 <div class="section">
-    <div class="section-title">🔥 涨停概念分布</div>
+    <div class="section-title">🔥 热点板块与涨停龙头</div>
     <div class="section-content">
-        <table><tr><th>概念板块</th><th>涨幅</th><th>龙头代表</th></tr>{concept_rows}</table>
+        <table><tr><th>概念板块</th><th>涨幅</th><th>涨停龙头股</th></tr>{concept_block}</table>
     </div>
 </div>
 
 <div class="section">
-    <div class="section-title">💰 板块资金流向热力图</div>
+    <div class="section-title">💰 板块资金流向</div>
     <div class="section-content">
         <table><tr><th>板块</th><th>资金动向</th></tr>{flow_rows}</table>
-    </div>
-</div>
-
-<div class="section">
-    <div class="section-title">👑 涨停龙头股</div>
-    <div class="section-content">
-        <table><tr><th>股票</th><th>代码</th><th>涨跌幅</th><th>涨停原因</th></tr>{leader_rows}</table>
-    </div>
-</div>
-
-<div class="section">
-    <div class="section-title">🌏 北向资金</div>
-    <div class="section-content" style="font-size:13px;line-height:2;">
-        <div>当日北向资金净<span class="profit">{nf['total']}</span></div>
-        <div>沪股通: <span class="profit">{nf['sh']}</span> | 深股通: <span class="profit">{nf['sz']}</span></div>
     </div>
 </div>
 
@@ -791,7 +782,7 @@ tr:last-child td {{ border-bottom: none; }}
 </div>
 
 <div class="footer">
-    A股收盘复盘 · 数据来源：腾讯行情/新浪财经/东方财富 · 实时API · 仅供参考不构成投资建议
+    A股收盘复盘 · 数据来源：腾讯行情/新浪财经/东方财富 · 实时API · 免责声明：仅供学习参考，不构成投资建议
 </div>
 
 </body>
@@ -882,12 +873,21 @@ def format_feishu_cards(data):
     """将数据格式化为3张飞书Markdown卡片"""
     date_str = f"{data['date']} {data['weekday']}"
     nf = data["north_flow"]
+    zt_stocks = data["zt_data"].get("stocks", [])
 
-    # 卡片1: 模块1-5
+    # 构建概念→龙头映射
+    concept_leader_map = {}
+    for ct in data["concept_top"]:
+        leaders = []
+        for s in zt_stocks:
+            if ct["name"] in s.get("reason", "") or s.get("reason", "") == ct["name"]:
+                leaders.append(s["name"])
+        concept_leader_map[ct["name"]] = leaders[:3]
+
+    # 卡片1: 情绪+指数+热点板块（含龙头）
     card1_md = f"""🌡️ **市场情绪温度计: {data['sentiment_temp']}°（{data['sentiment_level']}）**
 涨停: {data['zt_data']['total']}家 | 跌停: {data['dt_count']}家
-成交额: {data['total_amount']}亿
-北向资金: 净{nf['total']}
+成交额: {data['total_amount']}亿 | 北向资金: 净{nf['total']}
 
 📊 **指数概览**
 """
@@ -895,22 +895,19 @@ def format_feishu_cards(data):
         sign = "+" if idx["change_pct"] >= 0 else ""
         card1_md += f"{idx['name']}: {idx['price']}（{sign}{idx['change_pct']}%）\n"
 
-    card1_md += "\n🔥 **概念板块涨幅TOP**\n"
+    card1_md += "\n🔥 **热点板块与涨停龙头**\n"
     for ct in data["concept_top"]:
-        card1_md += f"• {ct['name']}: {ct['change_pct']:+.2f}%\n"
+        leaders = concept_leader_map.get(ct["name"], [])
+        leader_str = "、".join(leaders) if leaders else "—"
+        card1_md += f"• {ct['name']}（{ct['change_pct']:+.2f}%）→ {leader_str}\n"
 
-    card1_md += "\n💰 **板块资金流向**\n"
+    # 卡片2: 板块资金+大宗商品+美元
+    card2_md = "💰 **板块资金流向**\n"
     for fl in data["sector_flow"]:
         tag = "🔴流入" if fl["dir"] == "in" else "🟢流出"
-        card1_md += f"• {fl['name']}: {tag} {fl['amount']}\n"
+        card2_md += f"• {fl['name']}: {tag} {fl['amount']}\n"
 
-    card1_md += "\n👑 **涨停龙头股**\n"
-    for ld in data["zt_data"]["stocks"][:6]:
-        card1_md += f"• {ld['name']}({ld['code']}) {ld['zdf']:+.1f}%: {ld['reason']}\n"
-
-    # 卡片2: 模块6-10
-    card2_md = f"""🛢️ **大宗商品行情**
-"""
+    card2_md += f"\n🛢️ **大宗商品行情**\n"
     for code, cm in data["commodities"].items():
         card2_md += f"• {cm['name']}: {cm['price']}（{cm['change_pct']}）\n"
 
@@ -922,27 +919,17 @@ def format_feishu_cards(data):
     card2_md += f"\n🌏 **北向资金: 净{nf['total']}**\n"
     card2_md += f"沪股通: {nf['sh']} | 深股通: {nf['sz']}\n"
 
-    # 卡片3: 模块11-14
-    card3_md = "📝 **今日涨停板块梳理**\n"
-    for ct in data["concept_top"][:5]:
-        card3_md += f"• {ct['name']}（涨幅{ct['change_pct']:+.2f}%）\n"
-
-    # 盘后热点资讯
+    # 卡片3: 热点资讯+明日展望
+    card3_md = ""
     closing_news = data.get("closing_news", [])
     if closing_news:
-        card3_md += "\n📰 **盘后热点资讯**\n"
-        for n in closing_news[:5]:
+        card3_md += "📰 **盘后热点资讯**\n"
+        for n in closing_news[:6]:
             card3_md += f"• {n['title']}\n"
             if n.get("digest"):
                 card3_md += f"  {n['digest'][:60]}\n"
 
-    card3_md += "\n📅 **近期关注**\n"
-    card3_md += "• 关注明日LPR报价\n"
-    card3_md += "• 关注美联储决议后续影响\n"
-    card3_md += "• 关注板块资金轮动方向\n"
-
     card3_md += "\n🔮 **明日展望**\n"
-    # 根据板块资金自动生成
     inflow = [s for s in data["sector_flow"] if s["dir"] == "in"]
     outflow = [s for s in data["sector_flow"] if s["dir"] == "out"]
     if inflow:
