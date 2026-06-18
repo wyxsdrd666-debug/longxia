@@ -694,6 +694,12 @@ def generate_html(data):
         c = "#e74c3c" if idx["change_pct"] >= 0 else "#27ae60"
         idx_rows += f'<tr><td>{idx["name"]}</td><td style="color:{c}">{idx["price"]}</td><td style="color:{c}">{chg_sign}{idx["change_pct"]}%</td></tr>\n'
 
+    # ---- 概念涨停股数量（用于标签和板块列表）----
+    concept_cnt_map = {}
+    for ct in data["concept_top"]:
+        zt_list = data.get("concept_zt", {}).get(ct["name"], [])
+        concept_cnt_map[ct["name"]] = len(zt_list)
+
     # ---- 涨停概念标签（彩色气泡）----
     concept_tags = ""
     tag_colors = ["#e74c3c","#f39c12","#e056a0","#9b59b6","#3498db","#1abc9c"]
@@ -719,12 +725,6 @@ def generate_html(data):
 
     flow_left = "\n".join([_flow_bar(f, "in") for f in inflow[:5]])
     flow_right = "\n".join([_flow_bar(f, "out") for f in outflow[:5]])
-
-    # ---- 概念涨停股数量（用于标签）----
-    concept_cnt_map = {}
-    for ct in data["concept_top"]:
-        zt_list = data.get("concept_zt", {}).get(ct["name"], [])
-        concept_cnt_map[ct["name"]] = len(zt_list)
 
     # ---- 热点板块与代表个股（精确匹配：概念成分股API）----
     concept_rows = ""
