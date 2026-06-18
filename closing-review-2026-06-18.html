@@ -6,29 +6,29 @@
 <title>A股收盘复盘 | 2026-06-18</title>
 <style>
 * { margin: 0; padding: 0; box-sizing: border-box; }
-body { font-family: "Microsoft YaHei","PingFang SC",sans-serif; background: #0a0e27; color: #e0e0e0; width: 800px; margin: 0 auto; }
-.header { background: linear-gradient(135deg,#1a1a3e,#0d1b3e,#1a1a3e); padding: 28px 24px; text-align: center; border-bottom: 2px solid #2a4a8a; }
+body { font-family: "Microsoft YaHei","PingFang SC",sans-serif; background: #f5f6fa; color: #2c3e50; width: 800px; margin: 0 auto; }
+.header { background: linear-gradient(135deg,#1a3a5c,#2c5f8a,#1a3a5c); padding: 28px 24px; text-align: center; border-bottom: 3px solid #e74c3c; }
 .header h1 { font-size: 24px; color: #fff; margin-bottom: 6px; }
-.header .sub { font-size: 13px; color: #8899bb; }
+.header .sub { font-size: 13px; color: #a0c4e8; }
 .header .date { font-size: 14px; color: #ffd700; margin-top: 4px; }
-.section { margin: 16px 12px; background: #111633; border-radius: 8px; overflow: hidden; border: 1px solid #1e2a4a; }
-.section-title { background: linear-gradient(90deg,#1a2d5a,#111633); padding: 10px 16px; font-size: 15px; font-weight: bold; color: #ffd700; border-bottom: 1px solid #2a3a5a; }
+.section { margin: 16px 12px; background: #fff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
+.section-title { background: linear-gradient(90deg,#eef2f7,#fff); padding: 12px 16px; font-size: 15px; font-weight: bold; color: #1a3a5c; border-bottom: 1px solid #e8ecf1; }
 .section-content { padding: 12px 16px; }
 table { width: 100%; border-collapse: collapse; font-size: 13px; }
-th { background: #1a2540; color: #8899bb; font-weight: normal; padding: 8px 10px; text-align: left; font-size: 12px; border-bottom: 1px solid #2a3a5a; }
-td { padding: 7px 10px; border-bottom: 1px solid #1a2540; }
+th { background: #f0f3f8; color: #7f8c8d; font-weight: bold; padding: 8px 10px; text-align: left; font-size: 12px; border-bottom: 2px solid #e8ecf1; }
+td { padding: 7px 10px; border-bottom: 1px solid #f0f3f8; }
 tr:last-child td { border-bottom: none; }
 .num { text-align: right; }
 .sentiment-box { display: flex; align-items: center; gap: 16px; }
-.sentiment-gauge { width: 80px; height: 80px; border-radius: 50%; background: conic-gradient(#27ae60 0% 50%,#1a2540 50% 100%); display: flex; align-items: center; justify-content: center; }
-.sentiment-inner { width: 58px; height: 58px; border-radius: 50%; background: #111633; display: flex; align-items: center; justify-content: center; font-size: 20px; font-weight: bold; color: #27ae60; }
+.sentiment-gauge { width: 80px; height: 80px; border-radius: 50%; background: conic-gradient(#27ae60 0% 50%,#eee 50% 100%); display: flex; align-items: center; justify-content: center; }
+.sentiment-inner { width: 58px; height: 58px; border-radius: 50%; background: #fff; display: flex; align-items: center; justify-content: center; font-size: 20px; font-weight: bold; color: #27ae60; }
 .sentiment-stats { flex: 1; font-size: 12px; line-height: 1.8; }
-.sentiment-stats span { color: #8899bb; }
-.sentiment-stats .val { color: #ffd700; font-weight: bold; }
-.footer { text-align: center; padding: 16px; color: #556; font-size: 11px; border-top: 1px solid #1e2a4a; margin-top: 12px; }
+.sentiment-stats span { color: #95a5a6; }
+.sentiment-stats .val { color: #2c3e50; font-weight: bold; }
+.footer { text-align: center; padding: 16px; color: #aaa; font-size: 11px; border-top: 1px solid #eee; margin-top: 12px; }
 .risk { color: #27ae60; font-weight: bold; }
 .profit { color: #e74c3c; font-weight: bold; }
-.highlight { color: #ffd700; }
+.highlight { color: #e74c3c; }
 </style>
 </head>
 <body>
@@ -36,7 +36,7 @@ tr:last-child td { border-bottom: none; }
 <div class="header">
     <h1>A股收盘复盘报告</h1>
     <div class="date">2026-06-18 周四收盘 | 总成交额 3.0亿</div>
-    <div class="sub">14模块全景复盘 · AI自动生成 · 实时API数据</div>
+    <div class="sub">实时API数据 · 多板块全景复盘 · 仅供参考不构成投资建议</div>
 </div>
 
 <div class="section">
@@ -68,20 +68,44 @@ tr:last-child td { border-bottom: none; }
 </div>
 
 <div class="section">
-    <div class="section-title">🔥 涨停概念分布</div>
+    <div class="section-title">🔥 热点板块与涨停龙头</div>
     <div class="section-content">
-        <table><tr><th>概念板块</th><th>涨幅</th><th>龙头代表</th></tr><tr><td>蓝宝石</td><td class="num">+399.00%</td><td>—</td></tr>
-<tr><td>Kimi概念</td><td class="num">+303.00%</td><td>—</td></tr>
-<tr><td>高带宽内存</td><td class="num">+301.00%</td><td>—</td></tr>
-<tr><td>科技风格</td><td class="num">+283.00%</td><td>—</td></tr>
-<tr><td>先进封装</td><td class="num">+281.00%</td><td>—</td></tr>
-<tr><td>CPO概念</td><td class="num">+274.00%</td><td>—</td></tr>
-</table>
+        <table><tr><th>概念板块</th><th>涨幅</th><th>涨停龙头股</th></tr>
+        <tr>
+            <td style="font-weight:bold;width:18%;">蓝宝石</td>
+            <td style="color:#e74c3c;width:12%;">+399.00%</td>
+            <td style="color:#555;font-size:12px;">—</td>
+        </tr>
+        <tr>
+            <td style="font-weight:bold;width:18%;">Kimi概念</td>
+            <td style="color:#e74c3c;width:12%;">+303.00%</td>
+            <td style="color:#555;font-size:12px;">—</td>
+        </tr>
+        <tr>
+            <td style="font-weight:bold;width:18%;">高带宽内存</td>
+            <td style="color:#e74c3c;width:12%;">+301.00%</td>
+            <td style="color:#555;font-size:12px;">—</td>
+        </tr>
+        <tr>
+            <td style="font-weight:bold;width:18%;">科技风格</td>
+            <td style="color:#e74c3c;width:12%;">+283.00%</td>
+            <td style="color:#555;font-size:12px;">—</td>
+        </tr>
+        <tr>
+            <td style="font-weight:bold;width:18%;">先进封装</td>
+            <td style="color:#e74c3c;width:12%;">+281.00%</td>
+            <td style="color:#555;font-size:12px;">—</td>
+        </tr>
+        <tr>
+            <td style="font-weight:bold;width:18%;">CPO概念</td>
+            <td style="color:#e74c3c;width:12%;">+274.00%</td>
+            <td style="color:#555;font-size:12px;">—</td>
+        </tr></table>
     </div>
 </div>
 
 <div class="section">
-    <div class="section-title">💰 板块资金流向热力图</div>
+    <div class="section-title">💰 板块资金流向</div>
     <div class="section-content">
         <table><tr><th>板块</th><th>资金动向</th></tr><tr><td>消费电子零部件及组装</td><td style="color:#e74c3c">流入 +71.73亿</td></tr>
 <tr><td>消费电子</td><td style="color:#e74c3c">流入 +71.47亿</td></tr>
@@ -96,27 +120,12 @@ tr:last-child td { border-bottom: none; }
 </div>
 
 <div class="section">
-    <div class="section-title">👑 涨停龙头股</div>
-    <div class="section-content">
-        <table><tr><th>股票</th><th>代码</th><th>涨跌幅</th><th>涨停原因</th></tr></table>
-    </div>
-</div>
-
-<div class="section">
-    <div class="section-title">🌏 北向资金</div>
-    <div class="section-content" style="font-size:13px;line-height:2;">
-        <div>当日北向资金净<span class="profit">+1040.00亿</span></div>
-        <div>沪股通: <span class="profit">+520.00亿</span> | 深股通: <span class="profit">+520.00亿</span></div>
-    </div>
-</div>
-
-<div class="section">
     <div class="section-title">🛢️ 大宗商品行情</div>
     <div class="section-content">
-        <table><tr><th>品种</th><th>价格</th><th>涨跌</th></tr><tr><td>纽约黄金</td><td>4301.157</td><td>-0.08%</td></tr>
-<tr><td>纽约白银</td><td>68.996</td><td>-0.01%</td></tr>
-<tr><td>纽约原油</td><td>73.901</td><td>-0.07%</td></tr>
-<tr><td>美铜</td><td>647.097</td><td>+0.05%</td></tr>
+        <table><tr><th>品种</th><th>价格</th><th>涨跌</th></tr><tr><td>纽约黄金</td><td>4295.461</td><td>-0.06%</td></tr>
+<tr><td>纽约白银</td><td>68.877</td><td>-0.06%</td></tr>
+<tr><td>纽约原油</td><td>73.861</td><td>-0.04%</td></tr>
+<tr><td>美铜</td><td>645.635</td><td>-0.04%</td></tr>
 </table>
     </div>
 </div>
@@ -124,20 +133,20 @@ tr:last-child td { border-bottom: none; }
 <div class="section">
     <div class="section-title">📰 盘后热点资讯</div>
     <div class="section-content">
-        <table><tr><th style="width:40%;">标题</th><th>摘要</th></tr><tr><td style="color:#e74c3c;font-weight:bold;">6月18日港股收盘：恒指跌1.59% 恒生科技指数跌1.39%</td><td style="color:#aab;font-size:12px;">生指数收报23924.81点，跌387.35点，跌幅1.59%；恒生科技指数收报4604.35点，跌64.72点，跌幅1.39%。恒生指数成分股中药明康德、百济神州、药明生物涨幅居前，中国海外发展、华</td></tr>
-<tr><td style="color:#e74c3c;font-weight:bold;">6月18日涨停复盘：101只股涨停 旭光电子11天6板</td><td style="color:#aab;font-size:12px;">停个股数量方面，今日共计101股涨停，另有55只个股盘中一度触及涨停，封板率64.74%。</td></tr>
-<tr><td style="color:#e74c3c;font-weight:bold;">国家能源局：5月份全社会用电量同比增长6.9%</td><td style="color:#aab;font-size:12px;">月份，全社会用电量8671亿千瓦时，同比增长6.9%。从分产业用电看，第一产业用电量124亿千瓦时，同比增长5.0%。第二产业用电量5753亿千瓦时，同比增长6.0%；其中，工业用电量5703亿千瓦时</td></tr>
-<tr><td style="color:#e74c3c;font-weight:bold;">市场监管总局督导货拉拉落实反垄断合规整改</td><td style="color:#aab;font-size:12px;">期，市场监管总局依据《中华人民共和国反垄断法》公开约谈货拉拉，要求其停止利用算法不合理压低货运价格、利用平台规则实施强制独家车贴等行为，全面开展自查整改，依法合规经营，主动回应各方关切，自觉接受社会监</td></tr>
-<tr><td style="color:#e74c3c;font-weight:bold;">商务部等八部门发布《关于加快“人工智能+消费”发展的实施意见》</td><td style="color:#aab;font-size:12px;">天（18日），商务部等八部门发布《关于加快“人工智能+消费”发展的实施意见》，围绕提升人工智能+商品消费、扩大人工智能+服务消费等五方面，提出17项具体举措，促进人工智能进千家万户、进千商万店，更好满</td></tr>
-<tr><td style="color:#e74c3c;font-weight:bold;">G7称降低对中国关键矿产的依赖 外交部：中方立场没有变化</td><td style="color:#aab;font-size:12px;">透社记者提问，G7峰会发表的声明中称，将降低对中国稀土和关键矿产的依赖。请问外交部对此有何评论？林剑表示，中方维护关键矿产全球产供链稳定与安全的立场没有变化，同时各方都有责任，为此发挥建设性作用。中方</td></tr>
-<tr><td style="color:#e74c3c;font-weight:bold;">寒武纪再创新高 否认向互联网厂商大量供货</td><td style="color:#aab;font-size:12px;">息面上，近期有关于国内互联网公司采购国产算力的消息。行业人士称字节跳动正在与天数智芯（09903.HK）讨论采购至少5万颗AI芯片，主要用于推理工作，华为、寒武纪也是字节跳动的供应商。</td></tr>
-<tr><td style="color:#e74c3c;font-weight:bold;">七部门联合印发《促进平台经济大中小企业协同发展行动方案》</td><td style="color:#aab;font-size:12px;">行动方案》以习近平新时代中国特色社会主义思想为指导，全面贯彻党的二十大和二十届历次全会精神，深入落实党中央、国务院关于促进平台经济创新健康发展的决策部署，系统推进大中小企业创新协同、生态协同、开放协同</td></tr>
+        <table><tr><th style="width:40%;">标题</th><th>摘要</th></tr><tr><td style="color:#e74c3c;font-weight:bold;">6月18日港股收盘：恒指跌1.59% 恒生科技指数跌1.39%</td><td style="color:#888;font-size:12px;">生指数收报23924.81点，跌387.35点，跌幅1.59%；恒生科技指数收报4604.35点，跌64.72点，跌幅1.39%。恒生指数成分股中药明康德、百济神州、药明生物涨幅居前，中国海外发展、华</td></tr>
+<tr><td style="color:#e74c3c;font-weight:bold;">6月18日涨停复盘：101只股涨停 旭光电子11天6板</td><td style="color:#888;font-size:12px;">停个股数量方面，今日共计101股涨停，另有55只个股盘中一度触及涨停，封板率64.74%。</td></tr>
+<tr><td style="color:#e74c3c;font-weight:bold;">国家能源局：5月份全社会用电量同比增长6.9%</td><td style="color:#888;font-size:12px;">月份，全社会用电量8671亿千瓦时，同比增长6.9%。从分产业用电看，第一产业用电量124亿千瓦时，同比增长5.0%。第二产业用电量5753亿千瓦时，同比增长6.0%；其中，工业用电量5703亿千瓦时</td></tr>
+<tr><td style="color:#e74c3c;font-weight:bold;">市场监管总局督导货拉拉落实反垄断合规整改</td><td style="color:#888;font-size:12px;">期，市场监管总局依据《中华人民共和国反垄断法》公开约谈货拉拉，要求其停止利用算法不合理压低货运价格、利用平台规则实施强制独家车贴等行为，全面开展自查整改，依法合规经营，主动回应各方关切，自觉接受社会监</td></tr>
+<tr><td style="color:#e74c3c;font-weight:bold;">商务部等八部门发布《关于加快“人工智能+消费”发展的实施意见》</td><td style="color:#888;font-size:12px;">天（18日），商务部等八部门发布《关于加快“人工智能+消费”发展的实施意见》，围绕提升人工智能+商品消费、扩大人工智能+服务消费等五方面，提出17项具体举措，促进人工智能进千家万户、进千商万店，更好满</td></tr>
+<tr><td style="color:#e74c3c;font-weight:bold;">G7称降低对中国关键矿产的依赖 外交部：中方立场没有变化</td><td style="color:#888;font-size:12px;">透社记者提问，G7峰会发表的声明中称，将降低对中国稀土和关键矿产的依赖。请问外交部对此有何评论？林剑表示，中方维护关键矿产全球产供链稳定与安全的立场没有变化，同时各方都有责任，为此发挥建设性作用。中方</td></tr>
+<tr><td style="color:#e74c3c;font-weight:bold;">寒武纪再创新高 否认向互联网厂商大量供货</td><td style="color:#888;font-size:12px;">息面上，近期有关于国内互联网公司采购国产算力的消息。行业人士称字节跳动正在与天数智芯（09903.HK）讨论采购至少5万颗AI芯片，主要用于推理工作，华为、寒武纪也是字节跳动的供应商。</td></tr>
+<tr><td style="color:#e74c3c;font-weight:bold;">七部门联合印发《促进平台经济大中小企业协同发展行动方案》</td><td style="color:#888;font-size:12px;">行动方案》以习近平新时代中国特色社会主义思想为指导，全面贯彻党的二十大和二十届历次全会精神，深入落实党中央、国务院关于促进平台经济创新健康发展的决策部署，系统推进大中小企业创新协同、生态协同、开放协同</td></tr>
 </table>
     </div>
 </div>
 
 <div class="footer">
-    A股收盘复盘 · 数据来源：腾讯行情/新浪财经/东方财富 · 实时API · 仅供参考不构成投资建议
+    A股收盘复盘 · 数据来源：腾讯行情/新浪财经/东方财富 · 实时API · 免责声明：仅供学习参考，不构成投资建议
 </div>
 
 </body>
