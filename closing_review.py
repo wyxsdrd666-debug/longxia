@@ -672,7 +672,7 @@ def generate_html(data):
     flow_left = "\n".join([_flow_bar(f, "in") for f in inflow[:5]])
     flow_right = "\n".join([_flow_bar(f, "out") for f in outflow[:5]])
 
-    # ---- 热点板块双列卡片（概念名+X只 + 龙头个股）----
+    # ---- 热点板块与代表个股（列表式：概念名 + 个股/涨幅横向排列）----
     concept_leader_map = {}
     for ct in data["concept_top"]:
         stocks_in_concept = []
@@ -682,18 +682,24 @@ def generate_html(data):
                 stocks_in_concept.append({"name": s["name"], "zdf": s["zdf"]})
         concept_leader_map[ct["name"]] = stocks_in_concept[:6]
 
-    concept_cards = ""
+    concept_rows = ""
     for ct in data["concept_top"]:
         pct = ct["change_pct"]
         pct_color = "#e74c3c" if pct > 0 else "#27ae60"
         leaders = concept_leader_map.get(ct["name"], [])
         cnt = len(leaders)
-        lines = ""
-        for ld in leaders:
-            lines += f'<div class="ld-row"><span class="ld-name">{ld["name"]}</span><span class="ld-pct" style="color:{pct_color}">{ld["zdf"]:+.2f}%</span></div>'
-        if not lines:
-            lines = '<div style="color:#aaa;font-size:12px;">暂无涨停个股</div>'
-        concept_cards += f'<div class="ccard"><div class="ccard-hd"><span class="ccard-title">{ct["name"]}</span><span class="ccard-badge">{cnt}只</span></div><div class="ccard-bd">{lines}</div></div>'
+        stock_list = ""
+        for i, ld in enumerate(leaders):
+            sep = ' <span style="color:#ddd;">/</span> ' if i > 0 else ""
+            sc = "#e74c3c" if ld["zdf"] > 0 else "#27ae60"
+            stock_list += f'{sep}<span class="hl-stock">{ld["name"]}</span> <span style="color:{sc};font-weight:bold;font-size:12px;">{ld["zdf"]:+.2f}%</span>'
+        if not leaders:
+            stock_list = '<span style="color:#aaa;">暂无涨停个股</span>'
+        concept_rows += f'''
+        <tr>
+            <td class="hl-concept" style="width:95px;"><span class="hl-concept-name">{ct["name"]}</span><span class="hl-concept-cnt">({cnt}只)</span></td>
+            <td class="hl-stocks">{stock_list}</td>
+        </tr>'''
 
     # ---- 涨停龙头股表格（股票/板块/涨跌幅/驱动逻辑）----
     leader_rows = ""
@@ -765,17 +771,12 @@ tr:last-child td {{ border-bottom: none; }}
 .flow-bar {{ height: 100%; border-radius: 6px; }}
 .flow-amt {{ width: 70px; font-weight: bold; font-size: 11px; white-space: nowrap; }}
 
-/* 概念双列卡片 */
-.ccard-grid {{ display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }}
-.ccard {{ background: #fafbfc; border-radius: 6px; border: 1px solid #e8ecf1; overflow: hidden; }}
-.ccard-hd {{ background: #eef2f7; padding: 7px 10px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #e0e4ea; }}
-.ccard-title {{ font-weight: bold; font-size: 12px; color: #2c3e50; }}
-.ccard-badge {{ background: #e74c3c; color: #fff; font-size: 10px; padding: 2px 7px; border-radius: 9px; }}
-.ccard-bd {{ padding: 5px 10px 7px; }}
-.ld-row {{ display: flex; justify-content: space-between; padding: 3px 0; border-bottom: 1px dotted #f0f0f0; font-size: 11px; }}
-.ld-row:last-child {{ border-bottom: none; }}
-.ld-name {{ color: #666; }}
-.ld-pct {{ font-weight: bold; }}
+/* 热点板块列表 */
+.hl-concept {{ padding-right: 8px; vertical-align: top; }}
+.hl-concept-name {{ font-weight: bold; color: #2c3e50; font-size: 13px; }}
+.hl-concept-cnt {{ color: #e74c3c; font-size: 11px; margin-left: 2px; }}
+.hl-stocks {{ font-size: 12px; line-height: 1.9; color: #555; }}
+.hl-stock {{ color: #2c3e50; font-weight: 500; }}
 
 /* 热点资讯 */
 .n-item {{ padding: 5px 0; border-bottom: 1px dotted #f0f0f0; font-size: 12px; line-height: 1.6; }}
@@ -822,7 +823,7 @@ tr:last-child td {{ border-bottom: none; }}
 </div>
 
 <div class="section">
-    <div class="section-title"><span class="icon">🏷️</span> 涨停概念分布</div>
+    <div class="section-title"><span class="icon">🏷️</span> 涨停概念分布图</div>
     <div class="section-content">
         <div class="ctags">{concept_tags}</div>
     </div>
@@ -847,7 +848,7 @@ tr:last-child td {{ border-bottom: none; }}
 <div class="section">
     <div class="section-title"><span class="icon">🔥</span> 热点板块与涨停代表个股</div>
     <div class="section-content">
-        <div class="ccard-grid">{concept_cards}</div>
+        <table class="hl-table"><tr><th style="width:95px;">热点板块</th><th>代表个股及涨幅</th></tr>{concept_rows}</table>
     </div>
 </div>
 
