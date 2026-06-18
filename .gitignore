@@ -1,0 +1,5 @@
+.workbuddy/
+tmp_*.md
+__pycache__/
+*.pyc
+.env
