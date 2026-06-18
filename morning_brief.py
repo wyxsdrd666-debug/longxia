@@ -27,11 +27,13 @@ HEADERS = {
     "Referer": "https://finance.sina.com.cn/",
 }
 
-EM_UT = "7eea3edcaed734bea9cbfc24409ed989"
+EM_UT = "bd1d9dd52904000a9764a5e5f3908853"
+EM_PUSH_URL = "https://push2delay.eastmoney.com"
 EM_HEADERS = {
     "User-Agent": HEADERS["User-Agent"],
     "Referer": "https://data.eastmoney.com/",
 }
+EM_PUSH2_UT = "7eea3edcaed734bea9cbfc24409ed989"
 
 # ============================================================
 # 飞书推送
@@ -242,7 +244,7 @@ def fetch_em_global_indices():
     result = {}
     for name, secid in secid_map.items():
         url = (
-            f"https://push2.eastmoney.com/api/qt/stock/get?"
+            f"{EM_PUSH_URL}/api/qt/stock/get?"
             f"secid={secid}&fields=f43,f58,f60,f170,f169"
             f"&ut={EM_UT}"
         )
@@ -287,7 +289,7 @@ def fetch_sector_fund_flow(top_n=8):
     返回 list of {name, amount, dir}
     """
     url = (
-        "https://push2.eastmoney.com/api/qt/clist/get?"
+        f"{EM_PUSH_URL}/api/qt/clist/get?"
         "fid=f62&po=1&pz=50&pn=1&fs=m:90+t:2"
         "&fields=f12,f14,f3,f62,f184,f66,f69,f72,f75"
         f"&ut={EM_UT}"
@@ -329,16 +331,15 @@ def fetch_sector_fund_flow(top_n=8):
 # 数据获取 - 东方财富涨停池
 # ============================================================
 def fetch_zt_pool(date_str="", page_size=100):
-    """获取涨停股数据
-    date_str: 格式 20260618
-    返回 {total_count, stocks: [{code, name, zdf, reason}]}
+    """获取涨停股数据（通过push2delay全市场行情按涨跌幅筛选）
+    早盘8:30运行时数据为前一交易日收盘数据
     """
-    if not date_str:
-        date_str = datetime.now(CST).strftime("%Y%m%d")
     url = (
-        f"https://push2ex.eastmoney.com/getTopicZTPool?"
-        f"ut=7eea3edcaed734bea9cbfc24409ed989&dpt=wz.ztzt"
-        f"&date={date_str}&pageSize={page_size}&sort=zdf&st=2"
+        f"{EM_PUSH_URL}/api/qt/clist/get?"
+        "fid=f3&po=0&pz=200&pn=1"
+        "&fs=m:0+t:6,m:0+t:80,m:1+t:2,m:0+t:13"
+        "&fields=f12,f14,f3,f2,f20,f100"
+        f"&ut={EM_UT}"
     )
     data = http_get_json(url, {
         "Referer": "https://data.eastmoney.com/",
@@ -346,17 +347,29 @@ def fetch_zt_pool(date_str="", page_size=100):
     })
     if not data or "data" not in data:
         return {"total": 0, "stocks": []}
-    pool = data["data"].get("pool", []) or []
-    total = data["data"].get("tc", len(pool))
+
+    diff = data["data"].get("diff", {})
     stocks = []
-    for s in pool:
+    for key, item in diff.items():
+        chg_pct = item.get("f3", 0) or 0
+        chg_real = chg_pct / 100
+        code = item.get("f12", "")
+        is_chuangye = code.startswith("30")
+        is_kechuang = code.startswith("68")
+        if is_chuangye or is_kechuang:
+            if chg_real < 18.0:
+                continue
+        else:
+            if chg_real < 9.0:
+                continue
         stocks.append({
-            "code": s.get("c", ""),
-            "name": s.get("n", ""),
-            "zdf": s.get("zdf", 0),
-            "reason": s.get("hy", ""),
+            "code": code,
+            "name": item.get("f14", ""),
+            "zdf": chg_real,
+            "reason": item.get("f100", ""),
         })
-    return {"total": total, "stocks": stocks}
+    stocks.sort(key=lambda x: x["zdf"], reverse=True)
+    return {"total": len(stocks), "stocks": stocks[:page_size]}
 
 
 # ============================================================
@@ -364,12 +377,12 @@ def fetch_zt_pool(date_str="", page_size=100):
 # ============================================================
 def fetch_dt_pool(date_str="", page_size=100):
     """获取跌停股数量"""
-    if not date_str:
-        date_str = datetime.now(CST).strftime("%Y%m%d")
     url = (
-        f"https://push2ex.eastmoney.com/getTopicDTPool?"
-        f"ut=7eea3edcaed734bea9cbfc24409ed989&dpt=wz.ztzt"
-        f"&date={date_str}&pageSize={page_size}&sort=zdf&st=2"
+        f"{EM_PUSH_URL}/api/qt/clist/get?"
+        "fid=f3&po=1&pz=200&pn=1"
+        "&fs=m:0+t:6,m:0+t:80,m:1+t:2,m:0+t:13"
+        "&fields=f12,f14,f3"
+        f"&ut={EM_UT}"
     )
     data = http_get_json(url, {
         "Referer": "https://data.eastmoney.com/",
@@ -377,8 +390,15 @@ def fetch_dt_pool(date_str="", page_size=100):
     })
     if not data or "data" not in data:
         return 0
-    pool = data["data"].get("pool", []) or []
-    return data["data"].get("tc", len(pool))
+
+    diff = data["data"].get("diff", {})
+    count = 0
+    for key, item in diff.items():
+        chg_pct = item.get("f3", 0) or 0
+        chg_real = chg_pct / 100
+        if chg_real <= -9.0:
+            count += 1
+    return count
 
 
 # ============================================================
@@ -387,9 +407,9 @@ def fetch_dt_pool(date_str="", page_size=100):
 def fetch_north_flow():
     """获取北向资金当日净流入"""
     url = (
-        "https://push2.eastmoney.com/api/qt/kamt.kline/get?"
+        f"{EM_PUSH_URL}/api/qt/kamt.kline/get?"
         "fields1=f1,f2,f3&fields2=f51,f52,f53,f54,f55,f56"
-        "&klt=101&lmt=1&ut=7eea3edcaed734bea9cbfc24409ed989"
+        f"&klt=101&lmt=1&ut={EM_UT}"
     )
     data = http_get_json(url, {
         "Referer": "https://data.eastmoney.com/",
@@ -457,9 +477,9 @@ def fetch_margin_balance():
     quotes = fetch_tencent_quotes(codes)
     # 融资余额需要从东方财富获取
     url = (
-        "https://push2.eastmoney.com/api/qt/stock/get?"
+        f"{EM_PUSH_URL}/api/qt/stock/get?"
         "secid=1.000001&fields=f43,f3,f6,f184,f62"
-        "&ut=7eea3edcaed734bea9cbfc24409ed989"
+        f"&ut={EM_UT}"
     )
     data = http_get_json(url, {
         "Referer": "https://data.eastmoney.com/",

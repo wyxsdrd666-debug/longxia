@@ -31,11 +31,15 @@ HEADERS = {
     "Referer": "https://finance.sina.com.cn/",
 }
 
-EM_UT = "7eea3edcaed734bea9cbfc24409ed989"
+EM_UT = "bd1d9dd52904000a9764a5e5f3908853"
+EM_PUSH_URL = "https://push2delay.eastmoney.com"  # push2 502 宕机时的延迟备用域名
 EM_HEADERS = {
     "User-Agent": HEADERS["User-Agent"],
     "Referer": "https://data.eastmoney.com/",
 }
+
+# push2 同样需要这个 ut 值
+EM_PUSH2_UT = "7eea3edcaed734bea9cbfc24409ed989"
 
 # ============================================================
 # 飞书推送
@@ -310,7 +314,7 @@ def fetch_sina_futures(codes):
 # ============================================================
 def fetch_sector_fund_flow(top_n=8):
     url = (
-        "https://push2.eastmoney.com/api/qt/clist/get?"
+        f"{EM_PUSH_URL}/api/qt/clist/get?"
         "fid=f62&po=1&pz=50&pn=1&fs=m:90+t:2"
         "&fields=f12,f14,f3,f62,f184,f66,f69,f72,f75"
         f"&ut={EM_UT}"
@@ -345,44 +349,67 @@ def fetch_sector_fund_flow(top_n=8):
 # ============================================================
 # 数据获取 - 涨停池
 # ============================================================
-def fetch_zt_pool(date_str="", page_size=200):
-    if not date_str:
-        date_str = datetime.now(CST).strftime("%Y%m%d")
+def fetch_zt_pool(top_n=30):
+    """获取涨停股票（通过push2delay全市场行情按涨跌幅筛选，替代push2ex API pool始终为空的bug）"""
     url = (
-        f"https://push2ex.eastmoney.com/getTopicZTPool?"
-        f"ut={EM_UT}&dpt=wz.ztzt"
-        f"&date={date_str}&pageSize={page_size}&sort=zdf&st=2"
+        f"{EM_PUSH_URL}/api/qt/clist/get?"
+        "fid=f3&po=0&pz=200&pn=1"
+        "&fs=m:0+t:6,m:0+t:80,m:1+t:2,m:0+t:13"  # 深A+沪A+创业板+科创板
+        "&fields=f12,f14,f3,f2,f8,f20,f100"
+        f"&ut={EM_UT}"
     )
     data = http_get_json(url, EM_HEADERS)
     if not data or "data" not in data:
         return {"total": 0, "stocks": []}
-    pool = data["data"].get("pool", []) or []
-    total = data["data"].get("tc", len(pool))
+
+    diff = data["data"].get("diff", {})
     stocks = []
-    for s in pool:
+    for key, item in diff.items():
+        chg_pct = item.get("f3", 0) or 0
+        chg_real = chg_pct / 100  # push2delay的f3需要除以100
+        # 涨停阈值：主板≥9.5%, 科创/创业板≥19.5%（盘中有波动，设宽松阈值）
+        code = item.get("f12", "")
+        is_chuangye = code.startswith("30")
+        is_kechuang = code.startswith("68")
+        if is_chuangye or is_kechuang:
+            if chg_real < 18.0:  # 20%涨停板，允许1%波动
+                continue
+        else:
+            if chg_real < 9.0:  # 10%涨停板，允许1%波动
+                continue
         stocks.append({
-            "code": s.get("c", ""),
-            "name": s.get("n", ""),
-            "zdf": s.get("zdf", 0),
-            "reason": s.get("hy", ""),
-            "ltsz": s.get("ltsz", 0),
+            "code": code,
+            "name": item.get("f14", ""),
+            "zdf": chg_real,
+            "reason": item.get("f100", ""),  # 所属行业
+            "ltsz": item.get("f20", 0) or 0,  # 总市值
         })
-    return {"total": total, "stocks": stocks}
+    # 按涨幅从高到低排序
+    stocks.sort(key=lambda x: x["zdf"], reverse=True)
+    return {"total": len(stocks), "stocks": stocks[:top_n]}
 
 
-def fetch_dt_pool(date_str="", page_size=200):
-    if not date_str:
-        date_str = datetime.now(CST).strftime("%Y%m%d")
+def fetch_dt_pool():
+    """获取跌停股票（同上，按涨跌幅升序筛选负值）"""
     url = (
-        f"https://push2ex.eastmoney.com/getTopicDTPool?"
-        f"ut={EM_UT}&dpt=wz.ztzt"
-        f"&date={date_str}&pageSize={page_size}&sort=zdf&st=2"
+        f"{EM_PUSH_URL}/api/qt/clist/get?"
+        "fid=f3&po=1&pz=200&pn=1"
+        "&fs=m:0+t:6,m:0+t:80,m:1+t:2,m:0+t:13"
+        "&fields=f12,f14,f3"
+        f"&ut={EM_UT}"
     )
     data = http_get_json(url, EM_HEADERS)
     if not data or "data" not in data:
         return 0
-    pool = data["data"].get("pool", []) or []
-    return data["data"].get("tc", len(pool))
+
+    diff = data["data"].get("diff", {})
+    count = 0
+    for key, item in diff.items():
+        chg_pct = item.get("f3", 0) or 0
+        chg_real = chg_pct / 100
+        if chg_real <= -9.0:
+            count += 1
+    return count
 
 
 # ============================================================
@@ -390,7 +417,7 @@ def fetch_dt_pool(date_str="", page_size=200):
 # ============================================================
 def fetch_north_flow():
     url = (
-        "https://push2.eastmoney.com/api/qt/kamt.kline/get?"
+        f"{EM_PUSH_URL}/api/qt/kamt.kline/get?"
         "fields1=f1,f2,f3&fields2=f51,f52,f53,f54,f55,f56"
         "&klt=101&lmt=1&ut=" + EM_UT
     )
@@ -428,7 +455,7 @@ def fetch_north_flow():
 def fetch_concept_top(top_n=6):
     """获取概念板块涨幅排行"""
     url = (
-        "https://push2.eastmoney.com/api/qt/clist/get?"
+        f"{EM_PUSH_URL}/api/qt/clist/get?"
         "fid=f3&po=1&pz=20&pn=1&fs=m:90+t:3"
         "&fields=f12,f14,f2,f3,f62,f184"
         f"&ut={EM_UT}"
@@ -441,8 +468,7 @@ def fetch_concept_top(top_n=6):
     for key, item in diff.items():
         name = item.get("f14", "")
         chg_pct = item.get("f3", 0) or 0
-        # f3 涨跌幅需要除以100
-        chg_real = chg_pct / 100 if chg_pct > 500 else chg_pct
+        chg_real = chg_pct / 100 if abs(chg_pct) > 500 else chg_pct
         concepts.append({
             "name": name,
             "change_pct": round(chg_real, 2),
@@ -524,7 +550,7 @@ def collect_all_data():
     # 3. 美元指数（东方财富）
     print("3. 美元指数...")
     url_usd = (
-        "https://push2.eastmoney.com/api/qt/stock/get?"
+        f"{EM_PUSH_URL}/api/qt/stock/get?"
         "secid=100.UDI&fields=f43,f58,f60,f170"
         f"&ut={EM_UT}"
     )
@@ -551,11 +577,11 @@ def collect_all_data():
 
     # 6. 涨停池
     print("6. 涨停池...")
-    zt_data = fetch_zt_pool(today_em, 200)
+    zt_data = fetch_zt_pool(60)
 
     # 7. 跌停池
     print("7. 跌停池...")
-    dt_count = fetch_dt_pool(today_em, 200)
+    dt_count = fetch_dt_pool()
 
     # 8. 北向资金
     print("8. 北向资金...")
