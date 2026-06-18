@@ -22,6 +22,8 @@ from html import escape
 # ============================================================
 WEBHOOK = os.environ.get("FEISHU_WEBHOOK")
 SECRET = os.environ.get("FEISHU_SECRET")
+FEISHU_APP_ID = os.environ.get("FEISHU_APP_ID", "")
+FEISHU_APP_SECRET = os.environ.get("FEISHU_APP_SECRET", "")
 CST = timezone(timedelta(hours=8))
 
 HEADERS = {
@@ -75,6 +77,104 @@ def build_markdown_card(title, md_content, color="blue"):
         },
         "elements": [{"tag": "markdown", "content": md_content}],
     }
+
+
+def build_image_card(title, image_key, alt_text="长图", color="red"):
+    """构建飞书图片卡片——长图直接展示"""
+    return {
+        "header": {
+            "title": {"tag": "plain_text", "content": title},
+            "template": color,
+        },
+        "elements": [
+            {
+                "tag": "img",
+                "img_key": image_key,
+                "alt": {"tag": "plain_text", "content": alt_text},
+                "preview": True,
+                "scale_type": "fit_horizontal",
+                "size": "stretch",
+            }
+        ],
+    }
+
+
+# ============================================================
+# 飞书图片上传
+# ============================================================
+def get_tenant_access_token(app_id, app_secret):
+    """获取飞书 tenant_access_token"""
+    url = "https://open.feishu.cn/open-apis/auth/v3/tenant_access_token/internal"
+    body = json.dumps({"app_id": app_id, "app_secret": app_secret}).encode("utf-8")
+    req = urllib.request.Request(
+        url, data=body,
+        headers={"Content-Type": "application/json; charset=utf-8"},
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=15) as resp:
+            data = json.loads(resp.read().decode("utf-8"))
+            token = data.get("tenant_access_token", "")
+            if not token:
+                print(f"[ERROR] 获取tenant_access_token失败: {data}", file=sys.stderr)
+                return ""
+            return token
+    except Exception as e:
+        print(f"[ERROR] 获取tenant_access_token异常: {e}", file=sys.stderr)
+        return ""
+
+
+def upload_image_to_feishu(app_id, app_secret, image_path):
+    """上传图片到飞书，返回 image_key"""
+    token = get_tenant_access_token(app_id, app_secret)
+    if not token:
+        return ""
+
+    boundary = "----WorkBuddyFormBoundary7MA4YWxkTrZu0gW"
+    try:
+        with open(image_path, "rb") as f:
+            image_data = f.read()
+    except Exception as e:
+        print(f"[ERROR] 读取图片文件失败: {e}", file=sys.stderr)
+        return ""
+
+    if not image_data:
+        print("[ERROR] 图片为空", file=sys.stderr)
+        return ""
+
+    # 构建 multipart/form-data 请求体
+    crlf = b"\r\n"
+    parts = []
+    parts.append(f"--{boundary}".encode("utf-8"))
+    parts.append(b'Content-Disposition: form-data; name="image_type"')
+    parts.append(b"")
+    parts.append(b"message")
+    parts.append(f"--{boundary}".encode("utf-8"))
+    parts.append(b'Content-Disposition: form-data; name="image"; filename="closing-review.png"')
+    parts.append(b"Content-Type: image/png")
+    parts.append(b"")
+    parts.append(image_data)
+    parts.append(f"--{boundary}--".encode("utf-8"))
+
+    body_data = crlf.join(parts)
+
+    url = "https://open.feishu.cn/open-apis/im/v1/images"
+    req = urllib.request.Request(url, data=body_data, headers={
+        "Authorization": f"Bearer {token}",
+        "Content-Type": f"multipart/form-data; boundary={boundary}",
+    })
+    try:
+        with urllib.request.urlopen(req, timeout=30) as resp:
+            data = json.loads(resp.read().decode("utf-8"))
+            code = data.get("code", -1)
+            if code != 0:
+                print(f"[ERROR] 上传图片失败: {data}", file=sys.stderr)
+                return ""
+            image_key = data.get("data", {}).get("image_key", "")
+            print(f"图片上传成功! image_key: {image_key}")
+            return image_key
+    except Exception as e:
+        print(f"[ERROR] 上传图片异常: {e}", file=sys.stderr)
+        return ""
 
 
 # ============================================================
@@ -687,6 +787,17 @@ def format_feishu_cards(data):
 # ============================================================
 # 主流程
 # ============================================================
+def _send_fallback_image_link(png_path, image_url, date_str):
+    """发送图片链接到飞书（当图片上传不可用时的备用方案）"""
+    img_md = f"🖼️ **收盘复盘长图**\n\n[点击查看完整长图]({image_url})\n\n> 图片托管于 GitHub Pages，加载可能需要几秒。"
+    try:
+        img_card = build_markdown_card(f"🖼️ 收盘复盘长图 | {date_str}", img_md, "red")
+        r = send_card(WEBHOOK, img_card, SECRET)
+        print(f"  -> 备用链接推送: {r}")
+    except Exception as e:
+        print(f"  -> 备用链接推送异常: {e}", file=sys.stderr)
+
+
 def main():
     if not WEBHOOK:
         print("Error: FEISHU_WEBHOOK environment variable is required", file=sys.stderr)
@@ -746,18 +857,35 @@ def main():
             except Exception as e:
                 print(f"  -> 推送异常: {e}", file=sys.stderr)
 
-        # 推送第4张卡片：长图链接
+        # 推送第4张卡片：长图（直接展示）
         if os.path.exists(png_path):
-            print(f"推送长图链接...")
-            img_md = f"🖼️ **收盘复盘长图**\n\n[点击查看完整长图]({image_url})\n\n> 图片托管于 GitHub Pages，加载可能需要几秒。"
-            try:
-                img_card = build_markdown_card(f"🖼️ 收盘复盘长图 | {date_str}", img_md, "red")
-                r = send_card(WEBHOOK, img_card, SECRET)
-                print(f"  -> {r}")
-            except Exception as e:
-                print(f"  -> 长图推送异常: {e}", file=sys.stderr)
+            if FEISHU_APP_ID and FEISHU_APP_SECRET:
+                print("上传长图到飞书...")
+                image_key = upload_image_to_feishu(FEISHU_APP_ID, FEISHU_APP_SECRET, png_path)
+                if image_key:
+                    print(f"推送长图卡片...")
+                    try:
+                        img_card = build_image_card(
+                            f"🖼️ 收盘复盘长图 | {date_str}",
+                            image_key,
+                            f"A股收盘复盘长图-{date_str}",
+                        )
+                        r = send_card(WEBHOOK, img_card, SECRET)
+                        print(f"  -> {r}")
+                    except Exception as e:
+                        print(f"  -> 长图推送异常: {e}", file=sys.stderr)
+                else:
+                    print("[WARN] 图片上传失败，发送链接备用")
+                    _send_fallback_image_link(png_path, image_url, date_str)
+            else:
+                print("[INFO] FEISHU_APP_ID/APP_SECRET 未配置，发送链接代替")
+                _send_fallback_image_link(png_path, image_url, date_str)
         else:
             print("[INFO] PNG长图未生成，跳过图片卡片")
+    else:
+        # 即使数据收集失败，如果PNG存在也尝试发送
+        if os.path.exists(png_path):
+            _send_fallback_image_link(png_path, image_url, date_str)
 
     print(f"HTML_PATH={html_path}")
     print(f"PNG_PATH={png_path}")
