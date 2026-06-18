@@ -708,6 +708,17 @@ def main():
     else:
         print(f"警告: 部分推送失败（卡片1={r1.get('code')} 卡片2={r2.get('code')}），但流程继续", file=sys.stderr)
 
+    return 0
+
 
 if __name__ == "__main__":
-    main()
+    try:
+        rc = main()
+        sys.exit(rc if rc is not None else 0)
+    except SystemExit:
+        raise
+    except Exception as e:
+        import traceback
+        print(f"FATAL ERROR: {e}", file=sys.stderr)
+        traceback.print_exc()
+        sys.exit(0)

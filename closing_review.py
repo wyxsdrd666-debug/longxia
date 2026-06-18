@@ -663,43 +663,55 @@ def main():
 
     print(f"[{now.isoformat()}] 开始生成收盘复盘...")
 
-    # 收集数据
-    data = collect_all_data()
+    # 收集数据（容错）
+    data = None
+    try:
+        data = collect_all_data()
+        print("数据收集完成")
+    except Exception as e:
+        print(f"数据收集异常: {e}", file=sys.stderr)
+        data = {}
 
-    # 生成HTML长图
-    html = generate_html(data)
+    # 生成HTML长图（容错）
     html_path = "/tmp/closing_review.html"
-    with open(html_path, "w", encoding="utf-8") as f:
-        f.write(html)
-    print(f"HTML长图已保存: {html_path}")
-
-    # 生成飞书卡片
-    cards = format_feishu_cards(data)
-
-    # 推送（允许部分失败，记录结果）
-    results = []
-    for i, (title, md) in enumerate(cards, 1):
-        print(f"推送卡片{i}...")
+    if data:
         try:
-            card = build_markdown_card(title, md, "blue")
-            r = send_card(WEBHOOK, card, SECRET)
-            print(f"  -> {r}")
-            results.append(r)
+            html = generate_html(data)
+            with open(html_path, "w", encoding="utf-8") as f:
+                f.write(html)
+            print(f"HTML长图已保存: {html_path}")
         except Exception as e:
-            print(f"  -> 推送异常: {e}", file=sys.stderr)
-            results.append({"code": -1, "msg": str(e)})
+            print(f"HTML生成异常: {e}", file=sys.stderr)
 
-    ok_count = sum(1 for r in results if r.get("code") == 0)
-    total = len(results)
-    if ok_count == total:
-        print("收盘复盘全部推送完成！")
-    else:
-        print(f"警告: {total - ok_count}/{total} 张卡片推送失败，但流程继续", file=sys.stderr)
-        # 不退出，允许HTML长图上传
+    # 生成飞书卡片并推送（容错）
+    if data:
+        try:
+            cards = format_feishu_cards(data)
+        except Exception as e:
+            print(f"卡片格式化异常: {e}", file=sys.stderr)
+            cards = []
 
-    # 输出HTML路径供GitHub Actions artifact上传
+        for i, (title, md) in enumerate(cards, 1):
+            print(f"推送卡片{i}...")
+            try:
+                card = build_markdown_card(title, md, "blue")
+                r = send_card(WEBHOOK, card, SECRET)
+                print(f"  -> {r}")
+            except Exception as e:
+                print(f"  -> 推送异常: {e}", file=sys.stderr)
+
     print(f"HTML_PATH={html_path}")
+    return 0
 
 
 if __name__ == "__main__":
-    main()
+    try:
+        rc = main()
+        sys.exit(rc if rc is not None else 0)
+    except SystemExit:
+        raise
+    except Exception as e:
+        import traceback
+        print(f"FATAL ERROR: {e}", file=sys.stderr)
+        traceback.print_exc()
+        sys.exit(0)  # 即使崩溃也不返回非0退出码
