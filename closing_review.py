@@ -448,6 +448,56 @@ def fetch_concept_top(top_n=6):
 
 
 # ============================================================
+# 数据获取 - 盘后热点资讯
+# ============================================================
+def fetch_closing_news(top_n=8):
+    """从东方财富7x24快讯获取今日盘后热点资讯"""
+    news_items = []
+    # 红字焦点快讯 (101) + 7x24全球直播 (102)
+    for news_type in [101, 102]:
+        url = (
+            f"https://newsapi.eastmoney.com/kuaixun/v1/"
+            f"getlist_{news_type}_ajaxResult_50_1_.html"
+        )
+        raw = http_get(url, EM_HEADERS, 10, "utf-8")
+        if not raw:
+            continue
+        # 去掉 JSONP 包装 var ajaxResult={...}
+        m = re.search(r"var ajaxResult=(.+)", raw)
+        if not m:
+            continue
+        try:
+            data = json.loads(m.group(1))
+        except json.JSONDecodeError:
+            continue
+        lives = data.get("LivesList", [])
+        for item in lives:
+            title = item.get("title", "").strip()
+            digest = item.get("digest", "").strip()
+            # 去掉括号中的重复标题
+            if digest.startswith(f"【{title}】"):
+                digest = digest[len(title) + 3:].strip()
+            elif digest.startswith(f"【"):
+                # 去掉开头括号
+                bracket_end = digest.find("】")
+                if bracket_end > 0 and bracket_end < 30:
+                    digest = digest[bracket_end + 2:].strip()
+            if title and len(title) > 8:
+                news_items.append({
+                    "title": title,
+                    "digest": digest[:100] if digest else "",
+                })
+    # 去重
+    seen = set()
+    unique = []
+    for n in news_items:
+        if n["title"] not in seen:
+            seen.add(n["title"])
+            unique.append(n)
+    return unique[:top_n]
+
+
+# ============================================================
 # 主数据收集
 # ============================================================
 def collect_all_data():
@@ -507,6 +557,10 @@ def collect_all_data():
     print("8. 北向资金...")
     north_flow = fetch_north_flow()
 
+    # 9. 盘后热点资讯
+    print("9. 盘后热点资讯...")
+    closing_news = fetch_closing_news(8)
+
     # 计算成交额
     sh_amount = a_indices.get("sh000001", {}).get("amount", 0)
     sz_amount = a_indices.get("sz399001", {}).get("amount", 0)
@@ -534,6 +588,7 @@ def collect_all_data():
         "total_amount": round(total_amount, 0),
         "sentiment_temp": temp,
         "sentiment_level": temp_level,
+        "closing_news": closing_news,
     }
 
 
@@ -588,6 +643,16 @@ def generate_html(data):
 
     # 北向资金
     nf = data["north_flow"]
+
+    # 盘后热点资讯
+    news_rows = ""
+    for n in data.get("closing_news", []):
+        title = n["title"]
+        digest = n.get("digest", "")
+        if digest:
+            news_rows += f'<tr><td style="color:#e74c3c;font-weight:bold;">{escape(title)}</td><td style="color:#aab;font-size:12px;">{escape(digest)}</td></tr>\n'
+        else:
+            news_rows += f'<tr><td style="color:#e74c3c;font-weight:bold;">{escape(title)}</td><td>—</td></tr>\n'
 
     html = f"""<!DOCTYPE html>
 <html lang="zh-CN">
@@ -685,6 +750,13 @@ tr:last-child td {{ border-bottom: none; }}
     <div class="section-title">🛢️ 大宗商品行情</div>
     <div class="section-content">
         <table><tr><th>品种</th><th>价格</th><th>涨跌</th></tr>{comm_rows}</table>
+    </div>
+</div>
+
+<div class="section">
+    <div class="section-title">📰 盘后热点资讯</div>
+    <div class="section-content">
+        <table><tr><th style="width:40%;">标题</th><th>摘要</th></tr>{news_rows}</table>
     </div>
 </div>
 
@@ -807,6 +879,15 @@ def format_feishu_cards(data):
     card3_md = "📝 **今日涨停板块梳理**\n"
     for ct in data["concept_top"][:5]:
         card3_md += f"• {ct['name']}（涨幅{ct['change_pct']:+.2f}%）\n"
+
+    # 盘后热点资讯
+    closing_news = data.get("closing_news", [])
+    if closing_news:
+        card3_md += "\n📰 **盘后热点资讯**\n"
+        for n in closing_news[:5]:
+            card3_md += f"• {n['title']}\n"
+            if n.get("digest"):
+                card3_md += f"  {n['digest'][:60]}\n"
 
     card3_md += "\n📅 **近期关注**\n"
     card3_md += "• 关注明日LPR报价\n"
