@@ -80,15 +80,19 @@ def build_markdown_card(title, md_content, color="blue"):
 # ============================================================
 # 数据获取 - 通用HTTP
 # ============================================================
-def http_get(url, headers=None, timeout=10, encoding="utf-8"):
+def http_get(url, headers=None, timeout=10, encoding="utf-8", retries=2):
     h = headers or HEADERS
-    req = urllib.request.Request(url, headers=h)
-    try:
-        with urllib.request.urlopen(req, timeout=timeout) as resp:
-            return resp.read().decode(encoding, errors="ignore")
-    except Exception as e:
-        print(f"[WARN] http_get failed: {url} -> {e}")
-        return ""
+    for attempt in range(retries + 1):
+        try:
+            req = urllib.request.Request(url, headers=h)
+            with urllib.request.urlopen(req, timeout=timeout) as resp:
+                return resp.read().decode(encoding, errors="ignore")
+        except Exception as e:
+            if attempt < retries:
+                time.sleep(1)
+                continue
+            print(f"[WARN] http_get failed: {url} -> {e}")
+            return ""
 
 
 def http_get_json(url, headers=None, timeout=10):
@@ -672,21 +676,26 @@ def main():
     # 生成飞书卡片
     cards = format_feishu_cards(data)
 
-    # 推送
+    # 推送（允许部分失败，记录结果）
     results = []
     for i, (title, md) in enumerate(cards, 1):
         print(f"推送卡片{i}...")
-        card = build_markdown_card(title, md, "blue")
-        r = send_card(WEBHOOK, card, SECRET)
-        print(f"  -> {r}")
-        results.append(r)
+        try:
+            card = build_markdown_card(title, md, "blue")
+            r = send_card(WEBHOOK, card, SECRET)
+            print(f"  -> {r}")
+            results.append(r)
+        except Exception as e:
+            print(f"  -> 推送异常: {e}", file=sys.stderr)
+            results.append({"code": -1, "msg": str(e)})
 
-    ok = all(r.get("code") == 0 for r in results)
-    if ok:
-        print("收盘复盘推送完成！")
+    ok_count = sum(1 for r in results if r.get("code") == 0)
+    total = len(results)
+    if ok_count == total:
+        print("收盘复盘全部推送完成！")
     else:
-        print("部分推送失败", file=sys.stderr)
-        sys.exit(1)
+        print(f"警告: {total - ok_count}/{total} 张卡片推送失败，但流程继续", file=sys.stderr)
+        # 不退出，允许HTML长图上传
 
     # 输出HTML路径供GitHub Actions artifact上传
     print(f"HTML_PATH={html_path}")

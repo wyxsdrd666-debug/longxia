@@ -78,16 +78,20 @@ def build_markdown_card(title, md_content, color="blue"):
 # ============================================================
 # 数据获取 - 通用HTTP请求
 # ============================================================
-def http_get(url, headers=None, timeout=10, encoding="utf-8"):
-    """通用HTTP GET请求"""
+def http_get(url, headers=None, timeout=10, encoding="utf-8", retries=2):
+    """通用HTTP GET请求（带重试）"""
     h = headers or HEADERS
-    req = urllib.request.Request(url, headers=h)
-    try:
-        with urllib.request.urlopen(req, timeout=timeout) as resp:
-            return resp.read().decode(encoding, errors="ignore")
-    except Exception as e:
-        print(f"[WARN] http_get failed: {url} -> {e}")
-        return ""
+    for attempt in range(retries + 1):
+        try:
+            req = urllib.request.Request(url, headers=h)
+            with urllib.request.urlopen(req, timeout=timeout) as resp:
+                return resp.read().decode(encoding, errors="ignore")
+        except Exception as e:
+            if attempt < retries:
+                time.sleep(1)
+                continue
+            print(f"[WARN] http_get failed: {url} -> {e}")
+            return ""
 
 
 def http_get_json(url, headers=None, timeout=10):
@@ -702,8 +706,7 @@ def main():
     if r1.get("code") == 0 and r2.get("code") == 0:
         print("早盘快讯推送完成！")
     else:
-        print("部分推送失败，请检查日志", file=sys.stderr)
-        sys.exit(1)
+        print(f"警告: 部分推送失败（卡片1={r1.get('code')} 卡片2={r2.get('code')}），但流程继续", file=sys.stderr)
 
 
 if __name__ == "__main__":
