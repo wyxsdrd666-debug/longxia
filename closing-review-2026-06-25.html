@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=800">
+<title>A股收盘复盘 | 2026-06-26</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: "Microsoft YaHei","PingFang SC",sans-serif; background: #f0f2f5; color: #2c3e50; width: 800px; margin: 0 auto; }
+.header { background: linear-gradient(135deg,#1a3a5c,#2c5f8a); padding: 26px 24px; text-align: center; }
+.header h1 { font-size: 22px; color: #fff; margin-bottom: 4px; }
+.header .date { font-size: 13px; color: #a0c4e8; }
+.header .vol { font-size: 12px; color: #ffd700; margin-top: 2px; }
+.section { margin: 12px 12px; background: #fff; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 4px rgba(0,0,0,0.05); }
+.section-title { padding: 10px 16px; font-size: 14px; font-weight: bold; color: #1a3a5c; border-bottom: 1px solid #eee; display: flex; align-items: center; gap: 6px; }
+.section-title .icon { font-size: 16px; }
+.section-content { padding: 12px 16px; }
+table { width: 100%; border-collapse: collapse; font-size: 13px; }
+th { background: #f7f8fa; color: #888; font-size: 12px; padding: 7px 10px; text-align: left; border-bottom: 2px solid #eee; }
+td { padding: 6px 10px; border-bottom: 1px solid #f5f5f5; }
+tr:last-child td { border-bottom: none; }
+.profit { color: #e74c3c; font-weight: bold; }
+.risk { color: #27ae60; font-weight: bold; }
+
+/* 情绪仪表 */
+.senti-box { display: flex; align-items: center; gap: 14px; }
+.senti-ring { width: 70px; height: 70px; border-radius: 50%; background: conic-gradient(#27ae60 0% 50%,#eee 50% 100%); display: flex; align-items: center; justify-content: center; }
+.senti-inner { width: 50px; height: 50px; border-radius: 50%; background: #fff; display: flex; align-items: center; justify-content: center; font-size: 18px; font-weight: bold; color: #27ae60; }
+.senti-info { font-size: 12px; line-height: 1.9; }
+.senti-info .lbl { color: #999; }
+.senti-info .v { font-weight: bold; }
+
+/* 概念标签 */
+.ctags { display: flex; flex-wrap: wrap; gap: 8px; }
+.ctag { color: #fff; font-size: 12px; padding: 4px 12px; border-radius: 14px; white-space: nowrap; }
+
+/* 资金流左右栏 */
+.flow-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.flow-col {  }
+.flow-col-title { font-size: 12px; color: #888; margin-bottom: 8px; padding-bottom: 4px; border-bottom: 1px solid #eee; }
+.flow-item { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; font-size: 12px; }
+.flow-name { width: 80px; color: #555; text-align: right; }
+.flow-bar-wrap { flex: 1; height: 12px; background: #f0f0f0; border-radius: 6px; overflow: hidden; }
+.flow-bar { height: 100%; border-radius: 6px; }
+.flow-amt { width: 70px; font-weight: bold; font-size: 11px; white-space: nowrap; }
+
+/* 热点板块列表 */
+.hl-concept { padding-right: 8px; vertical-align: top; }
+.hl-concept-name { font-weight: bold; color: #2c3e50; font-size: 13px; }
+.hl-concept-cnt { color: #e74c3c; font-size: 11px; margin-left: 2px; }
+.hl-stocks { font-size: 12px; line-height: 1.9; color: #555; }
+.hl-stock { color: #2c3e50; font-weight: 500; }
+
+/* 热点资讯 */
+.n-item { padding: 5px 0; border-bottom: 1px dotted #f0f0f0; font-size: 12px; line-height: 1.6; }
+.n-item:last-child { border-bottom: none; }
+.n-title { color: #2c3e50; font-weight: bold; }
+.n-digest { color: #aaa; font-size: 11px; }
+
+/* 明日展望 */
+.outlook-box { background: #fdf8f0; border: 1px solid #f0e0c0; border-radius: 6px; padding: 12px 14px; font-size: 12px; line-height: 1.8; }
+.outlook-box .lbl { color: #999; }
+
+.footer { text-align: center; padding: 14px; color: #bbb; font-size: 10px; }
+</style>
+</head>
+<body>
+
+<div class="header">
+    <h1>A股收盘复盘报告</h1>
+    <div class="date">2026-06-26 周五收盘</div>
+    <div class="vol">总成交额 4.0亿</div>
+</div>
+
+<div class="section">
+    <div class="section-title"><span class="icon">🌡️</span> 市场情绪温度计</div>
+    <div class="section-content">
+        <div class="senti-box">
+            <div class="senti-ring"><div class="senti-inner">50°</div></div>
+            <div class="senti-info">
+                <span class="lbl">情绪状态</span> <span class="v">中性</span>&nbsp;&nbsp;
+                <span class="lbl">涨停</span> <span class="v profit">0家</span>&nbsp;&nbsp;
+                <span class="lbl">跌停</span> <span class="v risk">0家</span><br>
+                <span class="lbl">北向资金</span> <span class="v profit">+1040.00亿</span>&nbsp;&nbsp;
+                <span class="lbl">成交额</span> <span class="v">4.0亿</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="section">
+    <div class="section-title"><span class="icon">📊</span> 指数概览</div>
+    <div class="section-content">
+        <table><tr><th>指数</th><th>收盘</th><th>涨跌幅</th></tr><tr><td>上证指数</td><td style="color:#e74c3c">4120.28</td><td style="color:#e74c3c">+0.23%</td></tr>
+<tr><td>深证成指</td><td style="color:#e74c3c">16344.08</td><td style="color:#e74c3c">+1.82%</td></tr>
+<tr><td>创业板指</td><td style="color:#e74c3c">4371.99</td><td style="color:#e74c3c">+2.84%</td></tr>
+<tr><td>科创50</td><td style="color:#e74c3c">2066.33</td><td style="color:#e74c3c">+3.87%</td></tr>
+<tr><td>沪深300</td><td style="color:#e74c3c">5020.1</td><td style="color:#e74c3c">+1.56%</td></tr>
+<tr><td>中证500</td><td style="color:#e74c3c">8938.01</td><td style="color:#e74c3c">+1.08%</td></tr>
+</table>
+    </div>
+</div>
+
+<div class="section">
+    <div class="section-title"><span class="icon">🏷️</span> 涨停概念分布图</div>
+    <div class="section-content">
+        <div class="ctags"><span class="ctag" style="background:#e74c3c;">被动元件概念(6只)</span><span class="ctag" style="background:#f39c12;">高带宽内存(2只)</span><span class="ctag" style="background:#e056a0;">存储芯片(0只)</span><span class="ctag" style="background:#9b59b6;">科技风格(6只)</span><span class="ctag" style="background:#3498db;">培育钻石(2只)</span><span class="ctag" style="background:#1abc9c;">科创板做市商(0只)</span></div>
+    </div>
+</div>
+
+<div class="section">
+    <div class="section-title"><span class="icon">📈</span> 主力板块资金流向 TOP5</div>
+    <div class="section-content">
+        <div class="flow-cols">
+            <div class="flow-col">
+                <div class="flow-col-title">🔴 主力净流入 TOP5</div>
+                <div class="flow-item"><div class="flow-name">电子</div><div class="flow-bar-wrap"><div class="flow-bar" style="width:100%;background:#e74c3c;"></div></div><div class="flow-amt" style="color:#e74c3c">+157.04亿</div></div>
+<div class="flow-item"><div class="flow-name">元件</div><div class="flow-bar-wrap"><div class="flow-bar" style="width:73%;background:#e74c3c;"></div></div><div class="flow-amt" style="color:#e74c3c">+114.86亿</div></div>
+<div class="flow-item"><div class="flow-name">印制电路板</div><div class="flow-bar-wrap"><div class="flow-bar" style="width:49%;background:#e74c3c;"></div></div><div class="flow-amt" style="color:#e74c3c">+78.09亿</div></div>
+<div class="flow-item"><div class="flow-name">数字芯片设计</div><div class="flow-bar-wrap"><div class="flow-bar" style="width:42%;background:#e74c3c;"></div></div><div class="flow-amt" style="color:#e74c3c">+66.18亿</div></div>
+            </div>
+            <div class="flow-col">
+                <div class="flow-col-title">🟢 主力净流出 TOP5</div>
+                <div class="flow-item"><div class="flow-name">航空运输</div><div class="flow-bar-wrap"><div class="flow-bar" style="width:1%;background:#27ae60;"></div></div><div class="flow-amt" style="color:#27ae60">+2.83亿</div></div>
+<div class="flow-item"><div class="flow-name">装修装饰Ⅲ</div><div class="flow-bar-wrap"><div class="flow-bar" style="width:1%;background:#27ae60;"></div></div><div class="flow-amt" style="color:#27ae60">+2.85亿</div></div>
+<div class="flow-item"><div class="flow-name">装修装饰Ⅱ</div><div class="flow-bar-wrap"><div class="flow-bar" style="width:1%;background:#27ae60;"></div></div><div class="flow-amt" style="color:#27ae60">+2.85亿</div></div>
+<div class="flow-item"><div class="flow-name">通信网络设备及器件</div><div class="flow-bar-wrap"><div class="flow-bar" style="width:1%;background:#27ae60;"></div></div><div class="flow-amt" style="color:#27ae60">+3.01亿</div></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="section">
+    <div class="section-title"><span class="icon">🔥</span> 热点板块与涨停代表个股</div>
+    <div class="section-content">
+        <table class="hl-table"><tr><th style="width:95px;">热点板块</th><th>代表个股及涨幅</th></tr>
+        <tr>
+            <td class="hl-concept" style="width:95px;"><span class="hl-concept-name">被动元件概念</span><span class="hl-concept-cnt">(6只)</span></td>
+            <td class="hl-stocks"><span class="hl-stock">艾华集团</span> <span style="color:#e74c3c;font-weight:bold;font-size:12px;">+10.01%</span> <span style="color:#ddd;">/</span> <span class="hl-stock">江海股份</span> <span style="color:#e74c3c;font-weight:bold;font-size:12px;">+10.00%</span> <span style="color:#ddd;">/</span> <span class="hl-stock">鸿远电子</span> <span style="color:#e74c3c;font-weight:bold;font-size:12px;">+10.00%</span> <span style="color:#ddd;">/</span> <span class="hl-stock">火炬电子</span> <span style="color:#e74c3c;font-weight:bold;font-size:12px;">+10.00%</span> <span style="color:#ddd;">/</span> <span class="hl-stock">风华高科</span> <span style="color:#e74c3c;font-weight:bold;font-size:12px;">+10.00%</span> <span style="color:#ddd;">/</span> <span class="hl-stock">铜峰电子</span> <span style="color:#e74c3c;font-weight:bold;font-size:12px;">+9.99%</span></td>
+        </tr>
+        <tr>
+            <td class="hl-concept" style="width:95px;"><span class="hl-concept-name">高带宽内存</span><span class="hl-concept-cnt">(2只)</span></td>
+            <td class="hl-stocks"><span class="hl-stock">圣泉集团</span> <span style="color:#e74c3c;font-weight:bold;font-size:12px;">+10.00%</span> <span style="color:#ddd;">/</span> <span class="hl-stock">至纯科技</span> <span style="color:#e74c3c;font-weight:bold;font-size:12px;">+9.99%</span></td>
+        </tr>
+        <tr>
+            <td class="hl-concept" style="width:95px;"><span class="hl-concept-name">存储芯片</span><span class="hl-concept-cnt">(0只)</span></td>
+            <td class="hl-stocks"><span style="color:#aaa;">暂无涨停个股</span></td>
+        </tr>
+        <tr>
+            <td class="hl-concept" style="width:95px;"><span class="hl-concept-name">科技风格</span><span class="hl-concept-cnt">(6只)</span></td>
+            <td class="hl-stocks"><span class="hl-stock">北京君正</span> <span style="color:#e74c3c;font-weight:bold;font-size:12px;">+20.00%</span> <span style="color:#ddd;">/</span> <span class="hl-stock">TCL科技</span> <span style="color:#e74c3c;font-weight:bold;font-size:12px;">+10.10%</span> <span style="color:#ddd;">/</span> <span class="hl-stock">中科曙光</span> <span style="color:#e74c3c;font-weight:bold;font-size:12px;">+10.00%</span> <span style="color:#ddd;">/</span> <span class="hl-stock">江海股份</span> <span style="color:#e74c3c;font-weight:bold;font-size:12px;">+10.00%</span> <span style="color:#ddd;">/</span> <span class="hl-stock">中天科技</span> <span style="color:#e74c3c;font-weight:bold;font-size:12px;">+10.00%</span> <span style="color:#ddd;">/</span> <span class="hl-stock">德明利</span> <span style="color:#e74c3c;font-weight:bold;font-size:12px;">+10.00%</span></td>
+        </tr>
+        <tr>
+            <td class="hl-concept" style="width:95px;"><span class="hl-concept-name">培育钻石</span><span class="hl-concept-cnt">(2只)</span></td>
+            <td class="hl-stocks"><span class="hl-stock">惠丰钻石</span> <span style="color:#e74c3c;font-weight:bold;font-size:12px;">+10.18%</span> <span style="color:#ddd;">/</span> <span class="hl-stock">恒林股份</span> <span style="color:#e74c3c;font-weight:bold;font-size:12px;">+10.00%</span></td>
+        </tr>
+        <tr>
+            <td class="hl-concept" style="width:95px;"><span class="hl-concept-name">科创板做市商</span><span class="hl-concept-cnt">(0只)</span></td>
+            <td class="hl-stocks"><span style="color:#aaa;">暂无涨停个股</span></td>
+        </tr></table>
+    </div>
+</div>
+
+<div class="section">
+    <div class="section-title"><span class="icon">👑</span> 涨停龙头股</div>
+    <div class="section-content">
+        <table><tr><th>股票名称</th><th>所属板块</th><th>涨跌幅</th><th>驱动逻辑</th></tr></table>
+    </div>
+</div>
+
+<div class="section">
+    <div class="section-title"><span class="icon">🌏</span> 北向资金 & 大宗商品</div>
+    <div class="section-content">
+        <div style="font-size:13px;margin-bottom:10px;">
+            <span class="lbl" style="color:#999;">北向资金</span> 净<span class="profit">+1040.00亿</span>&nbsp;&nbsp;
+            沪股通 <span class="profit">+520.00亿</span>&nbsp;&nbsp;
+            深股通 <span class="profit">+520.00亿</span>
+            &nbsp;&nbsp;|&nbsp;&nbsp;<span class="lbl" style="color:#999;">美元指数</span> 101.34（-0.23%）
+        </div>
+        <table><tr><th>品种</th><th>价格</th><th>涨跌</th></tr><tr><td>纽约黄金</td><td>4051.173</td><td>+0.03%</td></tr>
+<tr><td>纽约白银</td><td>58.984</td><td>+0.13%</td></tr>
+<tr><td>纽约原油</td><td>71.607</td><td>+0.02%</td></tr>
+<tr><td>美铜</td><td>622.800</td><td>+0.02%</td></tr>
+</table>
+    </div>
+</div>
+
+<div class="section">
+    <div class="section-title"><span class="icon">📰</span> 盘后热点资讯</div>
+    <div class="section-content">
+        <div class="n-item"><span class="n-title">苹果因内存短缺大幅涨价 Mac及iPad多款产品调价幅度达20%</span> <span class="n-digest">体涨价幅度：MacBook Neo起售价从599美元升至699美元，MacBoo</span></div><div class="n-item"><span class="n-title">美国5月核心PCE同比上涨3.4% 美联储或在9月评估加息选项</span> <span class="n-digest">国5月核心个人消费支出价格指数同比增长3.4%，预估为3.4%，前值为3.3%。</span></div><div class="n-item"><span class="n-title">昀冢科技：5月7日至6月25日股价累计上涨277.95% 明起停牌核查</span> <span class="n-digest">冢科技(688260.SH)公告称，公司股票自2026年5月7日至6月25日期间</span></div><div class="n-item"><span class="n-title">通富微电：国家大基金持股比例降至5%以下</span> <span class="n-digest">富微电(002156.SZ)公告称，公司持股5%以上股东国家集成电路产业投资基金</span></div><div class="n-item"><span class="n-title">中船特气：股票交易停牌核查完成 将于6月26日复牌</span> <span class="n-digest">船特气6月25日公告，公司股票交易停牌核查已完成，经向上海证券交易所申请，公司股</span></div><div class="n-item"><span class="n-title">从MWC看国产算力链：CPU、光纤都喊“紧缺” 服务器订单积压排队</span> <span class="n-digest">月24日，MWC26上海（世界移动通信大会）正式开幕。在人工智能赋能千行百业，运</span></div>
+    </div>
+</div>
+
+<div class="section">
+    <div class="section-title"><span class="icon">🔮</span> 明日展望</div>
+    <div class="section-content">
+        <div class="outlook-box">
+            <div><span class="lbl">利好方向：</span>电子、元件、印制电路板</div>
+            <div><span class="lbl">承压方向：</span>航空运输、装修装饰Ⅲ、装修装饰Ⅱ</div>
+            <div style="margin-top:4px;color:#555;">策略建议：关注主力资金持续流入的板块，回避资金出逃方向。注意概念轮动节奏，关注龙头股持续性。</div>
+        </div>
+    </div>
+</div>
+
+<div class="footer">
+    A股收盘复盘 · 数据来源：腾讯行情/新浪财经/东方财富 · 实时API · 免责声明：仅供学习参考，不构成投资建议
+</div>
+
+</body>
+</html>
